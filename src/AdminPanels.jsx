@@ -162,6 +162,7 @@ export default function AdminPanels({ onBack }) {
             <table className="panel-table">
               <thead>
                 <tr>
+                  <th>Marque</th>
                   <th>Référence</th>
                   <th>Pitch</th>
                   <th>Résolution</th>
@@ -177,6 +178,7 @@ export default function AdminPanels({ onBack }) {
                 {panels.map(p => (
                   <tr key={p.id}>
                     <td style={{fontWeight:700}}>{p.panel_ref}</td>
+                    <td>{p.brand || '—'}</td>
                     <td>{p.pixel_pitch_mm} mm</td>
                     <td>{p.resolution_w}×{p.resolution_h}</td>
                     <td>{p.panel_width_m}×{p.panel_height_m} m</td>
@@ -217,7 +219,8 @@ export default function AdminPanels({ onBack }) {
 
             <div className="form-grid">
               {[
-                { name:"panel_ref",            label:"Référence",          full:true },
+               { name:"panel_ref",         label:"Référence",          full:false },
+               { name:"brand",             label:"Marque",             full:false },
                 { name:"pixel_pitch_mm",       label:"Pitch pixel (mm)" },
                 { name:"nits",                 label:"Luminosité (nits)" },
                 { name:"resolution_w",         label:"Résolution largeur" },
