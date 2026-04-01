@@ -695,19 +695,18 @@ export default function LEDCalculator({ onAdmin }) {
           </div>
         </div>
         <div className="topbar-right">
-          <button onClick={onAdmin} style={{
-  padding:"6px 14px", borderRadius:20,
-  border:"1px solid rgba(0,0,0,0.12)",
-  background:"white", color:"#6e6e73",
-  fontSize:12, fontWeight:600,
-  cursor:"pointer", fontFamily:"var(--font)"
-}}>
-  ⚙️ Admin
-</button>
-          <span className={`badge ${quality.cls}`}>{quality.label}</span>
-          <span className="badge badge-res">{rW} × {rH} px</span>
-        </div>
-      </div>
+  <span className={`badge ${quality.cls}`}>{quality.label}</span>
+  <span className="badge badge-res">{rW} × {rH} px</span>
+  <button onClick={onAdmin} style={{
+    padding:"6px 14px", borderRadius:20,
+    border:"1px solid rgba(0,0,0,0.12)",
+    background:"white", color:"#6e6e73",
+    fontSize:12, fontWeight:600,
+    cursor:"pointer", fontFamily:"var(--font)"
+  }}>
+    ⚙️ Admin
+  </button>
+</div>
 
       <div className="main-layout">
         {/* LEFT PANEL */}
