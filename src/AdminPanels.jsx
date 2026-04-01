@@ -37,7 +37,7 @@ const css = `
 `;
 
 const EMPTY_FORM = {
-  panel_ref: "", pixel_pitch_mm: "", resolution_w: "", resolution_h: "",
+  marque: "", brand: "", panel_ref: "", pixel_pitch_mm: "", resolution_w: "", resolution_h: "",
   panel_width_m: "0.6", panel_height_m: "0.337", weight_kgs: "",
   nits: "", power_max_w: "", power_avg_w: "", refresh_rate_hz: "3840",
   rj45_capacity: "535000", power_cable_capacity: "2200", is_active: true, notes: ""
@@ -162,8 +162,9 @@ export default function AdminPanels({ onBack }) {
             <table className="panel-table">
               <thead>
                 <tr>
-                  <th>Marque</th>
-                  <th>Référence</th>
+                 <th>Marque</th>
+                    <th>Référence</th>
+                    <th>Série</th>
                   <th>Pitch</th>
                   <th>Résolution</th>
                   <th>Dimensions</th>
@@ -177,6 +178,7 @@ export default function AdminPanels({ onBack }) {
               <tbody>
                 {panels.map(p => (
                   <tr key={p.id}>
+                    <td>{p.marque || '—'}</td>
                     <td style={{fontWeight:700}}>{p.panel_ref}</td>
                     <td>{p.brand || '—'}</td>
                     <td>{p.pixel_pitch_mm} mm</td>
@@ -219,8 +221,9 @@ export default function AdminPanels({ onBack }) {
 
             <div className="form-grid">
               {[
-               { name:"panel_ref",         label:"Référence",          full:false },
-               { name:"brand",             label:"Marque",             full:false },
+                { name:"marque",    label:"Marque",    full:false },
+                { name:"brand",     label:"Série",     full:false },
+                { name:"panel_ref", label:"Référence", full:false },
                 { name:"pixel_pitch_mm",       label:"Pitch pixel (mm)" },
                 { name:"nits",                 label:"Luminosité (nits)" },
                 { name:"resolution_w",         label:"Résolution largeur" },

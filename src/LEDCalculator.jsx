@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { supabase } from "./supabaseClient";
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap');
@@ -142,16 +143,7 @@ const css = `
   .checklist-text.warn { color: var(--orange); }
 `;
 
-const DATA = [
-  { panel_ref:"FX_2725", pixel_pitch_mm:"2.5", resolution_w:240, resolution_h:135, weight_kgs:4.0, nits:600, power_max_w:69, power_avg_w:21.0, panel_width_m:0.6, panel_height_m:0.337, refresh_rate_hz:3840, rj45_capacity:535000, power_cable_capacity:2200 },
-  { panel_ref:"FX_2718", pixel_pitch_mm:"1.8", resolution_w:320, resolution_h:180, weight_kgs:4.0, nits:600, power_max_w:78, power_avg_w:23.0, panel_width_m:0.6, panel_height_m:0.337, refresh_rate_hz:3840, rj45_capacity:535000, power_cable_capacity:2200 },
-  { panel_ref:"FX_2715", pixel_pitch_mm:"1.5", resolution_w:384, resolution_h:216, weight_kgs:4.0, nits:600, power_max_w:63, power_avg_w:20.0, panel_width_m:0.6, panel_height_m:0.337, refresh_rate_hz:3840, rj45_capacity:535000, power_cable_capacity:2200 },
-  { panel_ref:"FX_2712", pixel_pitch_mm:"1.2", resolution_w:480, resolution_h:270, weight_kgs:4.0, nits:600, power_max_w:74, power_avg_w:22.0, panel_width_m:0.6, panel_height_m:0.337, refresh_rate_hz:3840, rj45_capacity:535000, power_cable_capacity:2200 },
-  { panel_ref:"CX_2715", pixel_pitch_mm:"1.5", resolution_w:384, resolution_h:216, weight_kgs:3.8, nits:800, power_max_w:58, power_avg_w:19.6, panel_width_m:0.6, panel_height_m:0.337, refresh_rate_hz:3840, rj45_capacity:535000, power_cable_capacity:2200 },
-  { panel_ref:"CX_2712", pixel_pitch_mm:"1.2", resolution_w:480, resolution_h:270, weight_kgs:3.8, nits:800, power_max_w:66, power_avg_w:22.2, panel_width_m:0.6, panel_height_m:0.337, refresh_rate_hz:3840, rj45_capacity:535000, power_cable_capacity:2200 },
-  { panel_ref:"CX_2709", pixel_pitch_mm:"0.9", resolution_w:640, resolution_h:360, weight_kgs:3.8, nits:800, power_max_w:63, power_avg_w:21.2, panel_width_m:0.6, panel_height_m:0.337, refresh_rate_hz:3840, rj45_capacity:535000, power_cable_capacity:2200 },
-  { panel_ref:"CM_2709", pixel_pitch_mm:"0.9", resolution_w:640, resolution_h:360, weight_kgs:4.0, nits:1000, power_max_w:53, power_avg_w:17.7, panel_width_m:0.6, panel_height_m:0.337, refresh_rate_hz:3840, rj45_capacity:535000, power_cable_capacity:2200 },
-];
+
 
 function computeLED(selected, inputs, mode) {
   let panelsW, panelsH;
@@ -593,7 +585,9 @@ async function generatePDF(selected, result, quality) {
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export default function LEDCalculator({ onAdmin }) {
+  const [products, setProducts] = useState([]);
   const [selIdx, setSelIdx] = useState(0);
+  const [brandFilter, setBrandFilter] = useState("all");
   const [mode, setMode] = useState("dimensions");
   const [width, setWidth]   = useState(3);
   const [height, setHeight] = useState(2);
@@ -606,7 +600,25 @@ export default function LEDCalculator({ onAdmin }) {
   const vizRef = useRef(null);
   const [vizSize, setVizSize] = useState({w:600, h:290});
 
-  const selected = DATA[selIdx];
+  useEffect(() => {
+    supabase
+      .from("products")
+      .select("*")
+      .eq("is_active", true)
+      .order("marque")
+      .order("panel_ref")
+      .then(({ data }) => {
+        if (data) {
+          setProducts(data);
+          setSelIdx(0);
+        }
+      });
+  }, []);
+
+  const brands = ["all", ...new Set(products.map(p => p.marque).filter(Boolean))];
+const filtered = brandFilter === "all" ? products : products.filter(p => p.marque === brandFilter);
+const selected = filtered[selIdx] || filtered[0] || null;
+
 
   useEffect(() => {
     const styleTag = document.createElement("style");
@@ -624,12 +636,14 @@ export default function LEDCalculator({ onAdmin }) {
     }
   }, []);
 
+  
+
   useEffect(() => {
     const obs = new ResizeObserver(([e]) => setVizSize({w: e.contentRect.width, h: e.contentRect.height}));
     if (vizRef.current) obs.observe(vizRef.current);
     return () => obs.disconnect();
   }, []);
-
+ if (!selected) return <div style={{padding:40, textAlign:"center", color:"#6e6e73"}}>Chargement…</div>;
   const result = computeLED(selected, {
     width: Number(width)||0, height: Number(height)||0,
     panelsW: Number(panelsW)||1, panelsH: Number(panelsH)||1,
@@ -711,9 +725,16 @@ export default function LEDCalculator({ onAdmin }) {
         {/* LEFT PANEL */}
         <div className="left-panel">
           <SectionHeader icon="📦" title="Modèle de panneau" />
+<div style={{marginBottom:10}}>
+  <label className="input-label">Marque</label>
+  <select className="product-select" value={brandFilter} onChange={e => { setBrandFilter(e.target.value); setSelIdx(0); }}>
+    <option value="all">Toutes les marques</option>
+    {brands.filter(b => b !== "all").map(b => <option key={b} value={b}>{b}</option>)}
+  </select>
+</div>
           <div className="product-select-wrap">
             <select className="product-select" value={selIdx} onChange={e => setSelIdx(Number(e.target.value))}>
-              {DATA.map((p, i) => (
+              {filtered.map((p, i) => (
                 <option key={i} value={i}>{p.panel_ref} — P{p.pixel_pitch_mm} · {p.nits} nits · {p.resolution_w}×{p.resolution_h}px</option>
               ))}
             </select>
