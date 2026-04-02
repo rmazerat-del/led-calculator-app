@@ -882,6 +882,7 @@ useEffect(() => {
                     <tbody>
                       {[
                         ["Référence produit", selected.panel_ref],
+                        ["Type LED", selected.type_led || '—'],
                         ["Pitch pixel", `${selected.pixel_pitch_mm} mm`],
                         ["Dimensions cabinet", `${selected.panel_width_m} × ${selected.panel_height_m} m`],
                         ["Résolution cabinet", `${selected.resolution_w} × ${selected.resolution_h} px`],

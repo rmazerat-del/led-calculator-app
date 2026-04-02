@@ -141,9 +141,9 @@ export default function AdminPanels({ onBack }) {
               <thead>
                 <tr>
                   <th>Marque</th>
-                  <th>Type LED</th>
                   <th>Référence</th>
                   <th>Série</th>
+                  <th>Type LED</th>
                   <th>Pitch</th>
                   <th>Résolution</th>
                   <th>Dimensions</th>
@@ -158,9 +158,9 @@ export default function AdminPanels({ onBack }) {
                 {panels.map(p => (
                   <tr key={p.id}>
                     <td>{p.marque || '—'}</td>
-                    <td>{p.type_led || '—'}</td>
                     <td style={{fontWeight:700}}>{p.panel_ref}</td>
                     <td>{p.brand || '—'}</td>
+                    <td>{p.type_led || '—'}</td>
                     <td>{p.pixel_pitch_mm} mm</td>
                     <td>{p.resolution_w}×{p.resolution_h}</td>
                     <td>{p.panel_width_m}×{p.panel_height_m} m</td>
