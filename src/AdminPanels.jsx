@@ -94,9 +94,10 @@ export default function AdminPanels({ onBack }) {
       power_cable_capacity: parseInt(form.power_cable_capacity),
       is_active: form.is_active, notes: form.notes,
     };
-    let error;
-    if (editing) {
-      ({ error } = await supabase.from("products").update(payload).eq("id", editing));
+    let error, data;
+if (editing) {
+  ({ error, data } = await supabase.from("products").update(payload).eq("id", editing));
+  console.log("UPDATE result:", data, "ERROR:", error, "ID:", editing, "PAYLOAD:", payload);
     } else {
       ({ error } = await supabase.from("products").insert(payload));
     }
