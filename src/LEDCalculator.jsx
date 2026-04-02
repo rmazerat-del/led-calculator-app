@@ -619,9 +619,7 @@ useEffect(() => {
     .eq("is_active", true)
     .order("marque")
     .order("panel_ref")
-    .then(({ data, error }) => {
-      console.log("DATA:", data);
-      console.log("ERROR:", error);
+    .then(({ data }) => {
       if (data && data.length > 0) {
         setProducts(data);
         setSelIdx(0);
