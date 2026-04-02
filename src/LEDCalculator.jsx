@@ -649,31 +649,7 @@ export default function LEDCalculator({ onAdmin }) {
   </div>
 );
 
- 
-
-  useEffect(() => {
-    const styleTag = document.createElement("style");
-    styleTag.textContent = css;
-    document.head.appendChild(styleTag);
-    return () => document.head.removeChild(styleTag);
-  }, []);
-
-  useEffect(() => {
-    // Load jsPDF
-    if (!window.jspdf) {
-      const script = document.createElement("script");
-      script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-      document.head.appendChild(script);
-    }
-  }, []);
-
-  
-
-  useEffect(() => {
-    const obs = new ResizeObserver(([e]) => setVizSize({w: e.contentRect.width, h: e.contentRect.height}));
-    if (vizRef.current) obs.observe(vizRef.current);
-    return () => obs.disconnect();
-  }, []);
+   
  if (products.length === 0) return <div style={{padding:40, textAlign:"center", color:"#6e6e73"}}>Chargement…</div>;
   const result = computeLED(selected, {
     width: Number(width)||0, height: Number(height)||0,
