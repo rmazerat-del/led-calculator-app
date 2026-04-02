@@ -48,6 +48,18 @@ const css = `
   .pdf-btn:active { transform: translateY(0); }
   .pdf-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
   .main-layout { display: grid; grid-template-columns: 320px 1fr; height: calc(100vh - 60px); overflow: hidden; }
+@media (max-width: 768px) {
+  .main-layout { grid-template-columns: 1fr; height: auto; overflow: auto; }
+  .left-panel { border-right: none; border-bottom: 1px solid var(--border); }
+  .right-panel { height: auto; }
+  .viz-area { flex: 0 0 220px; }
+  .tab-content { overflow: visible; }
+  .topbar { padding: 0 14px; }
+  .topbar-title { font-size: 15px; }
+  .topbar-subtitle { display: none; }
+  .stat-grid-3 { grid-template-columns: 1fr 1fr; }
+  .topbar-right .badge-res { display: none; }
+}
   .left-panel { background: var(--surface); backdrop-filter: blur(20px); border-right: 1px solid var(--border); overflow-y: auto; padding: 20px 16px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
   .left-panel::-webkit-scrollbar { width: 4px; }
   .left-panel::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
