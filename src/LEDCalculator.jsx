@@ -677,7 +677,7 @@ const selected = filtered[selIdx] || filtered[0] || null;
     if (vizRef.current) obs.observe(vizRef.current);
     return () => obs.disconnect();
   }, []);
- if (!selected) return <div style={{padding:40, textAlign:"center", color:"#6e6e73"}}>Chargement…</div>;
+ if (products.length === 0) return <div style={{padding:40, textAlign:"center", color:"#6e6e73"}}>Chargement…</div>;
   const result = computeLED(selected, {
     width: Number(width)||0, height: Number(height)||0,
     panelsW: Number(panelsW)||1, panelsH: Number(panelsH)||1,
