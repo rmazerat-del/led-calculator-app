@@ -613,19 +613,41 @@ export default function LEDCalculator({ onAdmin }) {
   const [vizSize, setVizSize] = useState({w:600, h:290});
 
   useEffect(() => {
-    supabase
-      .from("products")
-      .select("*")
-      .eq("is_active", true)
-      .order("marque")
-      .order("panel_ref")
-      .then(({ data }) => {
-        if (data) {
-          setProducts(data);
-          setSelIdx(0);
-        }
-      });
+    supabase.from("products").select("*").eq("is_active", true)
+      .order("marque").order("panel_ref")
+      .then(({ data }) => { if (data) { setProducts(data); setSelIdx(0); } });
   }, []);
+
+  useEffect(() => {
+    const styleTag = document.createElement("style");
+    styleTag.textContent = css;
+    document.head.appendChild(styleTag);
+    return () => document.head.removeChild(styleTag);
+  }, []);
+
+  useEffect(() => {
+    if (!window.jspdf) {
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+      document.head.appendChild(script);
+    }
+  }, []);
+
+  useEffect(() => {
+    const obs = new ResizeObserver(([e]) => setVizSize({w: e.contentRect.width, h: e.contentRect.height}));
+    if (vizRef.current) obs.observe(vizRef.current);
+    return () => obs.disconnect();
+  }, []);
+
+  const brands = ["all", ...new Set(products.map(p => p.marque).filter(Boolean))];
+  const filtered = brandFilter === "all" ? products : products.filter(p => p.marque === brandFilter);
+  const selected = filtered[selIdx] || filtered[0] || null;
+
+  if (products.length === 0) return (
+    <div style={{minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#f5f5f7", fontFamily:"-apple-system, sans-serif", color:"#6e6e73"}}>
+      Chargement…
+    </div>
+  );
 
   const brands = ["all", ...new Set(products.map(p => p.marque).filter(Boolean))];
 const filtered = brandFilter === "all" ? products : products.filter(p => p.marque === brandFilter);
