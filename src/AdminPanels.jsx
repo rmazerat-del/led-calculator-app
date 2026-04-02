@@ -37,20 +37,21 @@ const css = `
 `;
 
 const EMPTY_FORM = {
-  marque: "", brand: "", panel_ref: "", pixel_pitch_mm: "", resolution_w: "", resolution_h: "",type_led: "",
+  marque: "", type_led: "", brand: "", panel_ref: "",
+  pixel_pitch_mm: "", resolution_w: "", resolution_h: "",
   panel_width_m: "0.6", panel_height_m: "0.337", weight_kgs: "",
   nits: "", power_max_w: "", power_avg_w: "", refresh_rate_hz: "3840",
   rj45_capacity: "535000", power_cable_capacity: "2200", is_active: true, notes: ""
 };
 
 export default function AdminPanels({ onBack }) {
-  const [panels, setPanels]     = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [panels, setPanels]       = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing]   = useState(null);
-  const [form, setForm]         = useState(EMPTY_FORM);
-  const [saving, setSaving]     = useState(false);
-  const [alert, setAlert]       = useState(null);
+  const [editing, setEditing]     = useState(null);
+  const [form, setForm]           = useState(EMPTY_FORM);
+  const [saving, setSaving]       = useState(false);
+  const [alert, setAlert]         = useState(null);
 
   useEffect(() => {
     const styleTag = document.createElement("style");
@@ -63,31 +64,14 @@ export default function AdminPanels({ onBack }) {
 
   const fetchPanels = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .order("panel_ref");
+    const { data, error } = await supabase.from("products").select("*").order("panel_ref");
     if (!error) setPanels(data || []);
     setLoading(false);
   };
 
-  const openAdd = () => {
-    setEditing(null);
-    setForm(EMPTY_FORM);
-    setShowModal(true);
-  };
-
-  const openEdit = (panel) => {
-    setEditing(panel.id);
-    setForm({ ...panel });
-    setShowModal(true);
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setEditing(null);
-    setForm(EMPTY_FORM);
-  };
+  const openAdd = () => { setEditing(null); setForm(EMPTY_FORM); setShowModal(true); };
+  const openEdit = (panel) => { setEditing(panel.id); setForm({ ...panel }); setShowModal(true); };
+  const closeModal = () => { setShowModal(false); setEditing(null); setForm(EMPTY_FORM); };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -98,30 +82,24 @@ export default function AdminPanels({ onBack }) {
     setSaving(true);
     setAlert(null);
     const payload = {
-      panel_ref:            form.panel_ref,
-      pixel_pitch_mm:       parseFloat(form.pixel_pitch_mm),
-      resolution_w:         parseInt(form.resolution_w),
-      resolution_h:         parseInt(form.resolution_h),
-      panel_width_m:        parseFloat(form.panel_width_m),
-      panel_height_m:       parseFloat(form.panel_height_m),
-      weight_kgs:           parseFloat(form.weight_kgs),
-      nits:                 parseInt(form.nits),
-      power_max_w:          parseInt(form.power_max_w),
-      power_avg_w:          parseFloat(form.power_avg_w),
-      refresh_rate_hz:      parseInt(form.refresh_rate_hz),
-      rj45_capacity:        parseInt(form.rj45_capacity),
+      marque: form.marque, type_led: form.type_led, brand: form.brand,
+      panel_ref: form.panel_ref,
+      pixel_pitch_mm: parseFloat(form.pixel_pitch_mm),
+      resolution_w: parseInt(form.resolution_w), resolution_h: parseInt(form.resolution_h),
+      panel_width_m: parseFloat(form.panel_width_m), panel_height_m: parseFloat(form.panel_height_m),
+      weight_kgs: parseFloat(form.weight_kgs), nits: parseInt(form.nits),
+      power_max_w: parseInt(form.power_max_w), power_avg_w: parseFloat(form.power_avg_w),
+      refresh_rate_hz: parseInt(form.refresh_rate_hz),
+      rj45_capacity: parseInt(form.rj45_capacity),
       power_cable_capacity: parseInt(form.power_cable_capacity),
-      is_active:            form.is_active,
-      notes:                form.notes,
+      is_active: form.is_active, notes: form.notes,
     };
-
     let error;
     if (editing) {
       ({ error } = await supabase.from("products").update(payload).eq("id", editing));
     } else {
       ({ error } = await supabase.from("products").insert(payload));
     }
-
     if (error) {
       setAlert({ type: "error", msg: error.message });
     } else {
@@ -145,8 +123,7 @@ export default function AdminPanels({ onBack }) {
           <div className="admin-topbar-sub">Back-office · Panneaux</div>
         </div>
         <button className="btn-secondary" onClick={onBack}>← Retour au calculateur</button>
-      </div><td>{p.marque || '—'}</td>
-      <td>{p.type_led || '—'}</td>
+      </div>
 
       <div className="admin-content">
         <div className="admin-header-row">
@@ -163,10 +140,10 @@ export default function AdminPanels({ onBack }) {
             <table className="panel-table">
               <thead>
                 <tr>
-                 <th>Marque</th>
-                 <th>Type</th>
-                    <th>Référence</th>
-                    <th>Série</th>
+                  <th>Marque</th>
+                  <th>Type LED</th>
+                  <th>Référence</th>
+                  <th>Série</th>
                   <th>Pitch</th>
                   <th>Résolution</th>
                   <th>Dimensions</th>
@@ -181,6 +158,7 @@ export default function AdminPanels({ onBack }) {
                 {panels.map(p => (
                   <tr key={p.id}>
                     <td>{p.marque || '—'}</td>
+                    <td>{p.type_led || '—'}</td>
                     <td style={{fontWeight:700}}>{p.panel_ref}</td>
                     <td>{p.brand || '—'}</td>
                     <td>{p.pixel_pitch_mm} mm</td>
@@ -214,19 +192,15 @@ export default function AdminPanels({ onBack }) {
         <div className="modal-bg" onClick={closeModal}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">{editing ? "Modifier le panneau" : "Ajouter un panneau"}</div>
-
             {alert && (
-              <div className={alert.type === "success" ? "alert-success" : "alert-error"}>
-                {alert.msg}
-              </div>
+              <div className={alert.type === "success" ? "alert-success" : "alert-error"}>{alert.msg}</div>
             )}
-
             <div className="form-grid">
               {[
-                { name:"marque",    label:"Marque",    full:false },
-                { name:"type_led",  label:"Type LED",  full:false },
-                { name:"brand",     label:"Série",     full:false },
-                { name:"panel_ref", label:"Référence", full:false },
+                { name:"marque",               label:"Marque",             full:false },
+                { name:"type_led",             label:"Type LED",           full:false },
+                { name:"brand",                label:"Série",              full:false },
+                { name:"panel_ref",            label:"Référence",          full:false },
                 { name:"pixel_pitch_mm",       label:"Pitch pixel (mm)" },
                 { name:"nits",                 label:"Luminosité (nits)" },
                 { name:"resolution_w",         label:"Résolution largeur" },
@@ -245,25 +219,22 @@ export default function AdminPanels({ onBack }) {
                   <input
                     className="form-input"
                     name={f.name}
-                    value={form[f.name]}
+                    value={form[f.name] || ""}
                     onChange={handleChange}
-                    type={f.name === "panel_ref" ? "text" : "number"}
+                    type={["marque","type_led","brand","panel_ref"].includes(f.name) ? "text" : "number"}
                     step="any"
                   />
                 </div>
               ))}
-
               <div className="form-group full">
                 <label className="form-label">Notes</label>
                 <input className="form-input" name="notes" value={form.notes || ""} onChange={handleChange} />
               </div>
-
               <div className="form-group" style={{flexDirection:"row", alignItems:"center", gap:10}}>
                 <input type="checkbox" name="is_active" checked={form.is_active} onChange={handleChange} id="is_active" />
                 <label htmlFor="is_active" className="form-label" style={{margin:0}}>Panneau actif</label>
               </div>
             </div>
-
             <div className="modal-footer">
               <button className="btn-secondary" onClick={closeModal}>Annuler</button>
               <button className="btn-primary" onClick={handleSave} disabled={saving}>
