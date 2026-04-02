@@ -612,11 +612,22 @@ export default function LEDCalculator({ onAdmin }) {
   const vizRef = useRef(null);
   const [vizSize, setVizSize] = useState({w:600, h:290});
 
-  useEffect(() => {
-    supabase.from("products").select("*").eq("is_active", true)
-      .order("marque").order("panel_ref")
-      .then(({ data }) => { if (data) { setProducts(data); setSelIdx(0); } });
-  }, []);
+useEffect(() => {
+  supabase
+    .from("products")
+    .select("*")
+    .eq("is_active", true)
+    .order("marque")
+    .order("panel_ref")
+    .then(({ data, error }) => {
+      console.log("DATA:", data);
+      console.log("ERROR:", error);
+      if (data && data.length > 0) {
+        setProducts(data);
+        setSelIdx(0);
+      }
+    });
+}, []);
 
   useEffect(() => {
     const styleTag = document.createElement("style");
