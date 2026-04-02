@@ -649,10 +649,7 @@ export default function LEDCalculator({ onAdmin }) {
   </div>
 );
 
-  const brands = ["all", ...new Set(products.map(p => p.marque).filter(Boolean))];
-const filtered = brandFilter === "all" ? products : products.filter(p => p.marque === brandFilter);
-const selected = filtered[selIdx] || filtered[0] || null;
-
+ 
 
   useEffect(() => {
     const styleTag = document.createElement("style");
