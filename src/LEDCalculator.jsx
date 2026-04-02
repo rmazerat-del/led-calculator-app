@@ -644,10 +644,10 @@ export default function LEDCalculator({ onAdmin }) {
   const selected = filtered[selIdx] || filtered[0] || null;
 
   if (products.length === 0) return (
-    <div style={{minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#f5f5f7", fontFamily:"-apple-system, sans-serif", color:"#6e6e73"}}>
-      Chargement…
-    </div>
-  );
+  <div style={{padding:40, textAlign:"center", color:"#6e6e73"}}>
+    Chargement… (products: {products.length})
+  </div>
+);
 
   const brands = ["all", ...new Set(products.map(p => p.marque).filter(Boolean))];
 const filtered = brandFilter === "all" ? products : products.filter(p => p.marque === brandFilter);
