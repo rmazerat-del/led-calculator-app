@@ -665,6 +665,7 @@ useEffect(() => {
     panelsW: Number(panelsW)||1, panelsH: Number(panelsH)||1,
     resW: Number(resW)||1920, resH: Number(resH)||1080
   }, mode);
+  
 
   const { totalWidth, totalHeight, resW: rW, resH: rH, totalPixels, surface,
     totalPanels, totalPowerMax, totalPowerAvg, panelsW: pW, panelsH: pH } = result;
@@ -725,7 +726,6 @@ useEffect(() => {
           </div>
         </div>
         <div className="topbar-right">
-          <span className={`badge ${quality.cls}`}>{quality.label}</span>
           <span className="badge badge-res">{rW} × {rH} px</span>
           <button onClick={onAdmin} style={{
             padding:"6px 14px", borderRadius:20,
@@ -762,7 +762,19 @@ useEffect(() => {
           <SectionHeader icon="🎛️" title="Mode de saisie" />
           <div className="mode-grid">
             {MODES.map(m => (
-              <button key={m.id} onClick={() => setMode(m.id)} className={`mode-btn ${mode === m.id ? "active" : ""}`}>
+              <button key={m.id} onClick={() => {
+  if (m.id === "panels") {
+    setPanelsW(result.panelsW);
+    setPanelsH(result.panelsH);
+  } else if (m.id === "resolution") {
+    setResW(result.resW);
+    setResH(result.resH);
+  } else if (m.id === "dimensions") {
+    setWidth(result.totalWidth.toFixed(2));
+    setHeight(result.totalHeight.toFixed(2));
+  }
+  setMode(m.id);
+}}>
                 <div className="mode-icon">{m.icon}</div>
                 <div className="mode-label">{m.label}</div>
               </button>
@@ -837,7 +849,16 @@ useEffect(() => {
                   </span>
                   <div className="height-line" />
                 </div>
-                <div className="led-screen" style={{ width: scrW, height: scrH, boxShadow: "0 4px 24px rgba(0,113,227,0.15), 0 1px 4px rgba(0,0,0,0.08)" }}>
+        <div
+  className="led-screen"
+  style={{ 
+  width: scrW, height: scrH,
+  backgroundImage: "url('/screen-content.jpg')",
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+  boxShadow: "0 4px 24px rgba(0,113,227,0.15)"
+}}
+>
                   <div className="led-grid" style={{ gridTemplateColumns: `repeat(${pW},1fr)`, gridTemplateRows: `repeat(${pH},1fr)` }}>
                     {Array.from({length: pW*pH}).map((_,i) => <div key={i} className="led-panel-cell" />)}
                   </div>
@@ -845,9 +866,7 @@ useEffect(() => {
                     <div className="screen-overlay-title">{pW} × {pH} cabinets</div>
                     <div className="screen-overlay-sub">{rW} × {rH} px · {surface.toFixed(1)} m²</div>
                   </div>
-                  <div className="screen-overlay-tr" style={{ background: quality.color + "18", border: `1px solid ${quality.color}30` }}>
-                    <span style={{color: quality.color, fontSize:10, fontWeight:700}}>{quality.label}</span>
-                  </div>
+                  
                   <div className="screen-bottom-bar" />
                 </div>
                 <div style={{width:64}} />
@@ -919,8 +938,7 @@ useEffect(() => {
                         ["Poids total", `${totalWeight.toFixed(1)} kg`],
                         ["Recul minimum", `${viewMin.toFixed(2)} m`],
                         ["Recul optimal", `${viewOpt.toFixed(2)} m`],
-                        ["Qualité image", quality.label],
-                      ].map(([k,v]) => <tr key={k}><td>{k}</td><td>{v}</td></tr>)}
+                        ].map(([k,v]) => <tr key={k}><td>{k}</td><td>{v}</td></tr>)}
                     </tbody>
                   </table>
                 </div>
