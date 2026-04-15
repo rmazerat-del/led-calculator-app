@@ -27,15 +27,14 @@ const css = `
     --font-mono:   'DM Mono', monospace;
   }
 
-  html, body, #root { height: 100%; width: 100%; overflow: hidden; }
+  html, body, #root { height: 100%; width: 100%; }
   body { font-family: var(--font-ui); background: var(--bg); color: var(--text); }
 
   .led-app {
     width: 100vw;
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
     background: var(--bg);
     position: relative;
   }
@@ -136,6 +135,7 @@ const css = `
     min-height: 0;
     position: relative;
     z-index: 1;
+    height: calc(100vh - 52px);
   }
 
   /* ── LEFT PANEL ── */
@@ -276,6 +276,42 @@ const css = `
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
+  }
+  @media (max-width: 768px) {
+    html, body, #root { overflow: auto; height: auto; }
+    .led-app { min-height: 100vh; height: auto; overflow-y: auto; }
+    .topbar { position: sticky; top: 0; }
+    .main-layout {
+      grid-template-columns: 1fr;
+      height: auto;
+      overflow: visible;
+      display: flex;
+      flex-direction: column;
+    }
+    .left-panel {
+      overflow: visible;
+      max-height: none;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
+    .right-panel {
+      overflow: visible;
+      min-height: 0;
+      height: auto;
+    }
+    .viz-area {
+      flex: 0 0 240px;
+      min-height: 240px;
+    }
+    .tab-content {
+      overflow: visible;
+      height: auto;
+      min-height: 400px;
+    }
+    .topbar-kpis { display: none; }
+    .stat-grid-3 { grid-template-columns: 1fr 1fr; }
+    .mode-grid { gap: 4px; }
+    .summary-grid { grid-template-columns: 1fr 1fr; }
   }
 
   /* ── VIZ AREA ── */
@@ -457,16 +493,7 @@ const css = `
   .loading-dot:nth-child(3) { animation-delay: 0.4s; }
   @keyframes pulse { 0%,80%,100% { opacity: 0.3; } 40% { opacity: 1; } }
 
-  /* Responsive */
-  @media (max-width: 768px) {
-    .main-layout { grid-template-columns: 1fr; height: auto; overflow: auto; }
-    .left-panel { border-right: none; border-bottom: 1px solid var(--border); max-height: none; }
-    .right-panel { min-height: 0; }
-    .viz-area { flex: 0 0 200px; }
-    .topbar-kpis { display: none; }
-    .topbar { padding: 0 12px; }
-    .stat-grid-3 { grid-template-columns: 1fr 1fr; }
-  }
+
 `;
 
 function computeLED(selected, inputs, mode) {
