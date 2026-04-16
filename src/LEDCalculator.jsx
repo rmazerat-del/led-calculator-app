@@ -2,8 +2,17 @@
 
 import { useState, useRef, useEffect } from "react";
 
-// ── BASE DE DONNÉES EMBARQUÉE ─────────────────────────────────────────────────
-// Données QSTECH hardcodées — jamais perdues, même sans Supabase
+// ── IMPORT SUPABASE (avec fallback si absent) ─────────────────────────────────
+let supabase = null;
+try {
+  // eslint-disable-next-line
+  const mod = require("./supabaseClient");
+  supabase = mod.supabase || mod.default || null;
+} catch {
+  // Pas de supabaseClient — on utilise uniquement les données statiques
+}
+
+// ── BASE QSTECH EMBARQUÉE — jamais perdue ─────────────────────────────────────
 const STATIC_PRODUCTS = [
   {
     panel_ref: "FX_2725", marque: "QSTECH", brand: "FX", type_led: "SMD",
@@ -63,22 +72,22 @@ const STATIC_PRODUCTS = [
   },
 ];
 
-// ── STYLES ────────────────────────────────────────────────────────────────────
+// ── THÈME ANTHRACITE ──────────────────────────────────────────────────────────
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg:          #1c1c1c;
-    --surface:     #252525;
-    --surface2:    #2f2f2f;
-    --surface3:    #3a3a3a;
-    --border:      #3c3c3c;
-    --border-hover:#585858;
-    --text:        #f0f0f0;
-    --text-muted:  #9e9e9e;
-    --text-dim:    #686868;
+    --bg:          #2b2b2b;
+    --surface:     #333333;
+    --surface2:    #3d3d3d;
+    --surface3:    #484848;
+    --border:      #4a4a4a;
+    --border-hover:#686868;
+    --text:        #f5f5f5;
+    --text-muted:  #b0b0b0;
+    --text-dim:    #808080;
     --accent:      #e8ff47;
     --accent2:     #47c4ff;
     --green:       #47ffb3;
@@ -94,25 +103,23 @@ const css = `
   .led-app {
     width: 100vw; min-height: 100vh;
     display: flex; flex-direction: column;
-    background: var(--bg); position: relative;
+    background: var(--bg);
   }
 
   /* ── TOPBAR ── */
   .topbar {
     height: 52px; min-height: 52px;
-    background: rgba(28,28,28,0.97);
+    background: #242424;
     border-bottom: 1px solid var(--border);
     padding: 0 20px;
     display: flex; align-items: center; justify-content: space-between;
     position: relative; z-index: 100;
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     flex-shrink: 0;
   }
   .topbar::after {
-    content: ''; position: absolute; bottom: 0; left: 0; right: 0;
-    height: 2px;
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
     background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 50%, var(--green) 100%);
-    opacity: 0.55;
+    opacity: 0.7;
   }
 
   .topbar-brand { display: flex; align-items: center; gap: 10px; }
@@ -135,8 +142,7 @@ const css = `
 
   .topbar-badge {
     padding: 4px 10px; border: 1px solid; font-size: 8px; font-weight: 700;
-    letter-spacing: 0.14em; text-transform: uppercase; border-radius: 3px;
-    font-family: var(--font-mono);
+    letter-spacing: 0.14em; text-transform: uppercase; border-radius: 3px; font-family: var(--font-mono);
   }
   .admin-btn {
     padding: 6px 12px; border: 1px solid var(--border); background: transparent;
@@ -148,27 +154,25 @@ const css = `
   .pdf-topbar-btn {
     padding: 7px 16px; border: none; background: var(--accent); color: #000;
     font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-    cursor: pointer; font-family: var(--font-ui); border-radius: 8px; transition: all 0.2s;
+    cursor: pointer; font-family: var(--font-ui); border-radius: 6px; transition: all 0.2s;
   }
-  .pdf-topbar-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(232,255,71,0.3); }
-  .pdf-topbar-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .pdf-topbar-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(232,255,71,0.35); }
+  .pdf-topbar-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-  /* ── MAIN LAYOUT ── */
+  /* ── LAYOUT ── */
   .main-layout {
-    display: grid; grid-template-columns: 272px 1fr;
-    flex: 1; min-height: 0; position: relative; z-index: 1;
-    height: calc(100vh - 52px);
+    display: grid; grid-template-columns: 320px 1fr;
+    flex: 1; min-height: 0; height: calc(100vh - 52px);
   }
 
   /* ── LEFT PANEL ── */
   .left-panel {
-    background: var(--surface); border-right: 1px solid var(--border);
+    background: #2e2e2e; border-right: 1px solid var(--border);
     overflow-y: auto; padding: 16px 14px;
     scrollbar-width: thin; scrollbar-color: var(--border-hover) transparent;
-    display: flex; flex-direction: column; gap: 0;
+    display: flex; flex-direction: column;
   }
   .left-panel::-webkit-scrollbar { width: 4px; }
-  .left-panel::-webkit-scrollbar-track { background: transparent; }
   .left-panel::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 4px; }
 
   .section-header {
@@ -184,17 +188,18 @@ const css = `
   }
   .section-header:first-child { margin-top: 0; }
 
-  /* Product selects */
+  /* Selects */
   .product-select-wrap { position: relative; margin-bottom: 10px; }
   .product-select {
     width: 100%; appearance: none;
     background: var(--surface2); border: 1px solid var(--border);
-    padding: 8px 28px 8px 10px;
+    padding: 9px 28px 9px 11px;
     font-family: var(--font-ui); font-size: 12px; color: var(--text);
     cursor: pointer; outline: none; border-radius: 8px; transition: border-color 0.2s;
   }
+  .product-select:hover { border-color: var(--border-hover); }
   .product-select:focus { border-color: var(--accent); }
-  .product-select option { background: var(--surface2); }
+  .product-select option { background: #3d3d3d; color: var(--text); }
   .product-select-chevron {
     position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
     pointer-events: none; color: var(--text-dim);
@@ -203,10 +208,11 @@ const css = `
   /* Mode grid */
   .mode-grid { display: flex; gap: 6px; margin-bottom: 14px; }
   .mode-btn {
-    flex: 1; padding: 8px 4px; border: 1px solid var(--border);
+    flex: 1; padding: 9px 4px; border: 1px solid var(--border);
     border-radius: 8px; cursor: pointer; text-align: center;
     background: var(--surface2); font-family: var(--font-ui); transition: all 0.15s;
   }
+  .mode-btn:hover:not(.active) { border-color: var(--border-hover); background: var(--surface3); }
   .mode-btn.active { background: var(--accent); border-color: var(--accent); }
   .mode-icon { font-size: 14px; margin-bottom: 3px; }
   .mode-label { font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; }
@@ -220,178 +226,162 @@ const css = `
   }
   .spinbox {
     display: flex; align-items: center; border: 1px solid var(--border);
-    background: var(--surface2); height: 34px; border-radius: 4px;
-    overflow: hidden; transition: border-color 0.2s;
+    background: var(--surface2); height: 36px; border-radius: 6px; overflow: hidden; transition: border-color 0.2s;
   }
   .spinbox:focus-within { border-color: var(--accent); }
   .spinbox-btn {
-    width: 30px; background: transparent; border: none;
-    color: var(--text-muted); font-size: 15px; cursor: pointer; height: 100%;
+    width: 32px; background: transparent; border: none;
+    color: var(--text-muted); font-size: 16px; cursor: pointer; height: 100%;
     transition: background 0.15s, color 0.15s;
   }
   .spinbox-btn:hover { background: var(--surface3); color: var(--accent); }
   .spinbox-input {
     flex: 1; text-align: center; background: transparent; border: none;
-    color: var(--text); font-size: 12px; font-weight: 600; outline: none;
-    font-family: var(--font-mono);
+    color: var(--text); font-size: 13px; font-weight: 600; outline: none; font-family: var(--font-mono);
   }
   .spinbox-unit { color: var(--text-dim); font-size: 9px; padding-right: 8px; letter-spacing: 0.08em; font-family: var(--font-mono); }
 
-  /* Summary grid */
+  /* Summary */
   .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 12px; }
   .summary-card {
     background: var(--surface2); border: 1px solid var(--border);
-    border-left: 2px solid var(--accent); padding: 8px 9px;
-    border-radius: 8px; transition: border-color 0.15s;
+    border-left: 3px solid var(--accent); padding: 9px 10px;
+    border-radius: 8px; transition: border-color 0.15s; min-width: 0;
   }
   .summary-card:hover { border-color: var(--border-hover); }
-  .summary-label { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.16em; font-weight: 700; margin-bottom: 3px; font-family: var(--font-mono); }
-  .summary-value { font-size: 12px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; font-family: var(--font-mono); }
-  .summary-sub { font-size: 9px; color: var(--text-muted); margin-top: 1px; font-family: var(--font-mono); }
+  .summary-label { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.16em; font-weight: 700; margin-bottom: 3px; font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .summary-value { font-size: 12px; font-weight: 700; color: var(--text); font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .summary-sub { font-size: 9px; color: var(--text-muted); margin-top: 2px; font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   .pdf-btn {
     display: flex; align-items: center; justify-content: center; gap: 7px;
-    width: 100%; padding: 11px 14px; border: none; cursor: pointer;
+    width: 100%; padding: 12px 14px; border: none; cursor: pointer;
     font-family: var(--font-ui); font-size: 10px; font-weight: 700;
     background: var(--accent); color: #000; letter-spacing: 0.14em; text-transform: uppercase;
     border-radius: 8px; transition: all 0.15s; margin-top: auto;
   }
   .pdf-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(232,255,71,0.3); }
-  .pdf-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .pdf-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
   /* ── RIGHT PANEL ── */
   .right-panel { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 
-  @media (max-width: 768px) {
-    html, body, #root { overflow: auto; height: auto; }
-    .led-app { min-height: 100vh; height: auto; overflow-y: auto; }
-    .topbar { position: sticky; top: 0; }
-    .main-layout { grid-template-columns: 1fr; height: auto; overflow: visible; display: flex; flex-direction: column; }
-    .left-panel { overflow: visible; max-height: none; border-right: none; border-bottom: 1px solid var(--border); }
-    .right-panel { overflow: visible; min-height: 0; height: auto; }
-    .viz-area { flex: 0 0 240px; min-height: 240px; }
-    .tab-content { overflow: visible; height: auto; min-height: 400px; }
-    .topbar-kpis { display: none; }
-    .stat-grid-3 { grid-template-columns: 1fr 1fr; }
-    .mode-grid { gap: 4px; }
-    .summary-grid { grid-template-columns: 1fr 1fr; }
-  }
-
   /* ── VIZ AREA ── */
   .viz-area {
-    flex: 0 0 260px; min-height: 0; background: var(--surface);
+    flex: 0 0 260px; background: #2a2a2a;
     border-bottom: 1px solid var(--border); position: relative;
     display: flex; align-items: center; justify-content: center; overflow: hidden;
   }
   .viz-grid-bg {
     position: absolute; inset: 0;
     background-image:
-      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+      linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
     background-size: 28px 28px;
   }
   .screen-container { position: relative; z-index: 2; }
   .dim-label { text-align: center; margin-bottom: 6px; display: flex; justify-content: center; align-items: center; gap: 8px; }
-  .dim-line { height: 1px; background: rgba(255,255,255,0.18); }
+  .dim-line { height: 1px; background: rgba(255,255,255,0.2); }
   .dim-text { color: var(--text-muted); font-size: 10px; font-weight: 600; white-space: nowrap; letter-spacing: 0.06em; font-family: var(--font-mono); }
   .dim-diff-ok { color: var(--green); margin-left: 4px; font-size: 8px; }
   .dim-diff-warn { color: var(--orange); margin-left: 4px; font-size: 8px; }
 
   .screen-row { display: flex; align-items: center; gap: 10px; }
   .height-label { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 56px; }
-  .height-line { width: 1px; flex: 1; background: rgba(255,255,255,0.18); }
+  .height-line { width: 1px; flex: 1; background: rgba(255,255,255,0.2); }
   .height-text { color: var(--text-muted); font-size: 10px; font-weight: 600; text-align: center; line-height: 1.5; font-family: var(--font-mono); }
 
   .led-screen {
     position: relative; border-radius: 3px; overflow: hidden;
-    border: 1px solid #555; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    border: 1px solid #666; box-shadow: 0 8px 40px rgba(0,0,0,0.4);
   }
   .led-grid { position: absolute; inset: 0; display: grid; gap: 1px; padding: 1px; }
-  .led-panel-cell { background: transparent; border-radius: 1px; border: 1px solid rgba(255,255,255,0.1); }
+  .led-panel-cell { background: transparent; border-radius: 1px; border: 1px solid rgba(255,255,255,0.12); }
 
   .screen-overlay-tl {
-    position: absolute; top: 7px; left: 7px; background: rgba(0,0,0,0.75);
-    padding: 4px 8px; border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 4px; backdrop-filter: blur(8px);
+    position: absolute; top: 7px; left: 7px; background: rgba(0,0,0,0.7);
+    padding: 4px 8px; border: 1px solid rgba(255,255,255,0.18); border-radius: 4px; backdrop-filter: blur(8px);
   }
-  .screen-overlay-title { color: var(--text); font-weight: 700; font-size: 9px; letter-spacing: 0.04em; }
-  .screen-overlay-sub { color: var(--text-muted); font-size: 8px; margin-top: 1px; font-family: var(--font-mono); }
+  .screen-overlay-title { color: #fff; font-weight: 700; font-size: 9px; letter-spacing: 0.04em; }
+  .screen-overlay-sub { color: rgba(255,255,255,0.55); font-size: 8px; margin-top: 1px; font-family: var(--font-mono); }
   .screen-bottom-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--green), var(--accent), var(--accent2)); }
 
   .viz-badges { text-align: center; margin-top: 8px; display: flex; justify-content: center; gap: 6px; }
   .viz-badge { font-size: 10px; font-weight: 700; padding: 4px 10px; border: 1px solid; border-radius: 20px; letter-spacing: 0.06em; font-family: var(--font-mono); }
 
   /* ── TABS ── */
-  .tab-bar { display: flex; border-bottom: 1px solid var(--border); background: var(--surface2); flex-shrink: 0; }
+  .tab-bar { display: flex; border-bottom: 1px solid var(--border); background: #2e2e2e; flex-shrink: 0; }
   .tab-btn {
-    flex: 1; padding: 10px 6px; border: none; cursor: pointer; background: transparent;
+    flex: 1; padding: 11px 6px; border: none; cursor: pointer; background: transparent;
     border-bottom: 2px solid transparent; color: var(--text-dim);
     font-size: 11px; font-weight: 700; font-family: var(--font-ui);
     letter-spacing: 0.08em; text-transform: uppercase; transition: all 0.2s;
   }
   .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--surface); }
-  .tab-btn:hover:not(.active) { color: var(--text-muted); }
+  .tab-btn:hover:not(.active) { color: var(--text-muted); background: var(--surface2); }
 
   /* ── TAB CONTENT ── */
   .tab-content {
-    flex: 1; overflow-y: auto; padding: 16px 20px; background: var(--surface);
+    flex: 1; overflow-y: auto; padding: 18px 22px; background: var(--surface);
     scrollbar-width: thin; scrollbar-color: var(--border-hover) transparent; min-height: 0;
   }
   .tab-content::-webkit-scrollbar { width: 4px; }
-  .tab-content::-webkit-scrollbar-thumb { background: rgba(124,111,255,0.3); border-radius: 4px; }
+  .tab-content::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 4px; }
 
   /* ── STAT CARDS ── */
-  .stat-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
-  .stat-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .stat-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
   .stat-card {
-    background: var(--surface2); border: 1px solid var(--border); border-top: 2px solid var(--accent);
-    padding: 12px 13px; border-radius: 12px; transition: all 0.15s; position: relative; overflow: hidden;
+    background: var(--surface2); border: 1px solid var(--border); border-top: 3px solid var(--accent);
+    padding: 14px 15px; border-radius: 10px; transition: all 0.15s;
   }
-  .stat-card:hover { border-color: var(--border-hover); box-shadow: 0 4px 20px rgba(0,0,0,0.3); transform: translateY(-1px); }
-  .stat-header { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
-  .stat-icon { font-size: 13px; }
+  .stat-card:hover { border-color: var(--border-hover); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+  .stat-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .stat-icon { font-size: 14px; }
   .stat-label { color: var(--text-muted); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; font-family: var(--font-mono); }
-  .stat-value { color: var(--text); font-size: 18px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-family: var(--font-mono); }
-  .stat-sub { color: var(--text-muted); font-size: 10px; margin-top: 4px; font-family: var(--font-mono); }
+  .stat-value { color: var(--text); font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; font-family: var(--font-mono); }
+  .stat-sub { color: var(--text-muted); font-size: 10px; margin-top: 5px; font-family: var(--font-mono); }
 
   /* ── TABLES ── */
-  .data-table-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
+  .data-table-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
   .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   .data-table thead tr { background: var(--surface3); }
-  .data-table th { text-align: left; padding: 9px 14px; color: var(--text-muted); font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.18em; font-family: var(--font-mono); }
+  .data-table th { text-align: left; padding: 10px 14px; color: var(--text-muted); font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.18em; font-family: var(--font-mono); border-bottom: 1px solid var(--border); }
   .data-table th:last-child { text-align: right; }
-  .data-table td { padding: 8px 14px; border-top: 1px solid var(--border); }
-  .data-table td:first-child { color: var(--text-muted); font-size: 12px; }
-  .data-table td:last-child { color: var(--text); font-weight: 600; text-align: right; font-family: var(--font-mono); font-size: 12px; }
+  .data-table td { padding: 9px 14px; border-top: 1px solid var(--border); }
+  .data-table td:first-child { color: var(--text-muted); }
+  .data-table td:last-child { color: var(--text); font-weight: 600; text-align: right; font-family: var(--font-mono); }
   .data-table tr:hover td { background: var(--surface3); }
 
   /* ── POWER BAR ── */
-  .power-bar-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
-  .power-bar-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .power-bar-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .power-bar-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
   .power-bar-label { color: var(--text-muted); font-size: 11px; letter-spacing: 0.08em; font-family: var(--font-mono); }
-  .power-bar-pct { color: var(--text); font-size: 13px; font-weight: 700; font-family: var(--font-mono); }
-  .power-bar-track { height: 4px; background: var(--surface3); border-radius: 4px; overflow: hidden; }
+  .power-bar-pct { color: var(--text); font-size: 14px; font-weight: 700; font-family: var(--font-mono); }
+  .power-bar-track { height: 6px; background: var(--surface3); border-radius: 4px; overflow: hidden; }
   .power-bar-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--accent)); border-radius: 4px; transition: width 0.6s ease; }
 
   /* ── CHECKLIST ── */
-  .checklist { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
-  .checklist-title { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 10px; font-family: var(--font-mono); }
-  .checklist-item { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .checklist { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .checklist-title { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 12px; font-family: var(--font-mono); }
+  .checklist-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
   .checklist-item:last-child { border-bottom: none; }
-  .checklist-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-  .checklist-text { font-size: 12px; color: var(--text-muted); }
+  .checklist-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .checklist-text { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
   .checklist-text.warn { color: var(--orange); }
 
-  /* Loading */
-  .loading-screen {
-    width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 16px; background: var(--bg);
-    color: var(--text-muted); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em;
+  /* Responsive */
+  @media (max-width: 768px) {
+    html, body, #root { overflow: auto; height: auto; }
+    .led-app { min-height: 100vh; height: auto; }
+    .topbar { position: sticky; top: 0; z-index: 100; }
+    .main-layout { grid-template-columns: 1fr; height: auto; display: flex; flex-direction: column; }
+    .left-panel { overflow: visible; border-right: none; border-bottom: 1px solid var(--border); }
+    .right-panel { overflow: visible; min-height: 0; height: auto; }
+    .viz-area { flex: 0 0 240px; }
+    .topbar-kpis { display: none; }
+    .stat-grid-3 { grid-template-columns: 1fr 1fr; }
   }
-  .loading-dot { display: inline-block; animation: pulse 1.2s ease-in-out infinite; }
-  .loading-dot:nth-child(2) { animation-delay: 0.2s; }
-  .loading-dot:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes pulse { 0%,80%,100% { opacity: 0.3; } 40% { opacity: 1; } }
 `;
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
@@ -407,13 +397,13 @@ function computeLED(selected, inputs, mode) {
     panelsW = Math.max(1, Math.ceil(inputs.resW / selected.resolution_w));
     panelsH = Math.max(1, Math.ceil(inputs.resH / selected.resolution_h));
   }
-  const totalWidth = panelsW * selected.panel_width_m;
-  const totalHeight = panelsH * selected.panel_height_m;
-  const resW = panelsW * selected.resolution_w;
-  const resH = panelsH * selected.resolution_h;
-  const totalPixels = resW * resH;
-  const surface = totalWidth * totalHeight;
-  const totalPanels = panelsW * panelsH;
+  const totalWidth   = panelsW * selected.panel_width_m;
+  const totalHeight  = panelsH * selected.panel_height_m;
+  const resW         = panelsW * selected.resolution_w;
+  const resH         = panelsH * selected.resolution_h;
+  const totalPixels  = resW * resH;
+  const surface      = totalWidth * totalHeight;
+  const totalPanels  = panelsW * panelsH;
   const totalPowerMax = totalPanels * selected.power_max_w;
   const totalPowerAvg = totalPanels * selected.power_avg_w;
   return { panelsW, panelsH, totalWidth, totalHeight, resW, resH, totalPixels, surface, totalPanels, totalPowerMax, totalPowerAvg };
@@ -460,10 +450,8 @@ async function generatePDF(selected, result, quality) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const W = 210, H = 297, margin = 16, colW = (W - margin * 2 - 8) / 2;
-
   const { panelsW: pW, panelsH: pH, totalWidth, totalHeight, resW: rW, resH: rH,
     totalPixels, surface, totalPanels, totalPowerMax, totalPowerAvg } = result;
-
   const powerLines  = Math.ceil(totalPowerMax / (selected.power_cable_capacity || 2200));
   const rj45Needed  = Math.ceil(totalPixels   / (selected.rj45_capacity       || 535000));
   const totalWeight = totalPanels * selected.weight_kgs;
@@ -484,173 +472,163 @@ async function generatePDF(selected, result, quality) {
   const setFill = (rgb) => doc.setFillColor(...rgb);
   const setDraw = (rgb) => doc.setDrawColor(...rgb);
   const setFont = (size, style="normal", rgb=C.text) => { doc.setFontSize(size); doc.setFont("helvetica", style); doc.setTextColor(...rgb); };
-  const rect = (x, y, w, h, r=0, fill=true) => { if (r > 0) doc.roundedRect(x, y, w, h, r, r, fill ? "F" : "S"); else doc.rect(x, y, w, h, fill ? "F" : "S"); };
+  const rect = (x, y, w, h, r=0, fill=true) => { if (r>0) doc.roundedRect(x,y,w,h,r,r,fill?"F":"S"); else doc.rect(x,y,w,h,fill?"F":"S"); };
   const text = (str, x, y, opts={}) => doc.text(str, x, y, opts);
 
   let y = 0;
-  setFill(C.dark); rect(0, 0, W, 40, 0);
-  setFill(C.blue); rect(0, 38, W * 0.5, 2, 0);
-  setFill(C.blue2); rect(W * 0.5, 38, W * 0.3, 2, 0);
-  setFill(C.pink); rect(W * 0.8, 38, W * 0.2, 2, 0);
-  setFont(18, "bold", C.white); text("LED Screen Report", margin + 22, 16);
-  setFont(8, "normal", C.muted);
-  text("Configurateur professionnel · " + new Date().toLocaleDateString("fr-FR", { day:"2-digit", month:"long", year:"numeric" }), margin + 22, 24);
-  setFont(7, "bold", C.blue); text(quality.label, W - margin - 4, 20, { align:"right" });
+  setFill(C.dark); rect(0,0,W,40,0);
+  setFill(C.blue); rect(0,38,W*0.5,2,0);
+  setFill(C.blue2); rect(W*0.5,38,W*0.3,2,0);
+  setFill(C.pink); rect(W*0.8,38,W*0.2,2,0);
+  setFont(18,"bold",C.white); text("LED Screen Report", margin+22, 16);
+  setFont(8,"normal",C.muted);
+  text("Configurateur professionnel · "+new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"}), margin+22, 24);
+  setFont(7,"bold",C.blue); text(quality.label, W-margin-4, 20, {align:"right"});
   y = 48;
 
-  setFill(C.surface2); rect(margin, y, W - margin*2, 14, 3);
-  setFill(C.blue); rect(margin, y, 3, 14, 0);
-  setFont(10, "bold", C.text); text(selected.panel_ref, margin + 8, y + 9);
-  setFont(7.5, "normal", C.muted);
-  text(`${selected.marque||""}  ·  P${selected.pixel_pitch_mm} mm  ·  ${selected.nits} nits  ·  ${selected.resolution_w}×${selected.resolution_h} px  ·  ${selected.refresh_rate_hz} Hz`, margin + 46, y + 9);
+  setFill(C.surface2); rect(margin,y,W-margin*2,14,3);
+  setFill(C.blue); rect(margin,y,3,14,0);
+  setFont(10,"bold",C.text); text(selected.panel_ref, margin+8, y+9);
+  setFont(7.5,"normal",C.muted);
+  text(`${selected.marque||""}  ·  P${selected.pixel_pitch_mm}mm  ·  ${selected.nits} nits  ·  ${selected.resolution_w}×${selected.resolution_h}px  ·  ${selected.refresh_rate_hz}Hz`, margin+46, y+9);
   y += 20;
 
   const kpis = [
-    { label:"PANNEAUX",    value:`${pW} × ${pH}`,                                       sub:`${totalPanels} total` },
-    { label:"DIMENSIONS",  value:`${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)}`, sub:`${surface.toFixed(2)} m²` },
-    { label:"RÉSOLUTION",  value:`${(totalPixels/1000000).toFixed(2)} Mpx`,              sub:`${rW} × ${rH}` },
-    { label:"POIDS TOTAL", value:`${totalWeight.toFixed(0)} kg`,                         sub:`${selected.weight_kgs} kg/unit` },
+    {label:"PANNEAUX",   value:`${pW} × ${pH}`,                                      sub:`${totalPanels} total`},
+    {label:"DIMENSIONS", value:`${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)}`,sub:`${surface.toFixed(2)} m²`},
+    {label:"RÉSOLUTION", value:`${(totalPixels/1000000).toFixed(2)} Mpx`,             sub:`${rW} × ${rH}`},
+    {label:"POIDS",      value:`${totalWeight.toFixed(0)} kg`,                        sub:`${selected.weight_kgs} kg/unit`},
   ];
-  const kpiW = (W - margin*2 - 9) / 4;
-  kpis.forEach((kpi, i) => {
-    const kx = margin + i * (kpiW + 3);
-    setFill(C.surface2); rect(kx, y, kpiW, 22, 2);
-    setDraw(C.blue); doc.setLineWidth(0.4); doc.roundedRect(kx, y, kpiW, 22, 2, 2, "S");
-    setFill(C.blue); rect(kx, y, kpiW, 1.5, 0);
-    setFont(6, "bold", C.muted); text(kpi.label, kx + kpiW/2, y + 8, { align:"center" });
-    setFont(9, "bold", C.text); text(kpi.value, kx + kpiW/2, y + 15, { align:"center" });
-    setFont(6, "normal", C.dim); text(kpi.sub, kx + kpiW/2, y + 20, { align:"center" });
+  const kpiW = (W-margin*2-9)/4;
+  kpis.forEach((kpi,i) => {
+    const kx = margin+i*(kpiW+3);
+    setFill(C.surface2); rect(kx,y,kpiW,22,2);
+    setDraw(C.blue); doc.setLineWidth(0.4); doc.roundedRect(kx,y,kpiW,22,2,2,"S");
+    setFill(C.blue); rect(kx,y,kpiW,1.5,0);
+    setFont(6,"bold",C.muted); text(kpi.label,kx+kpiW/2,y+8,{align:"center"});
+    setFont(9,"bold",C.text); text(kpi.value,kx+kpiW/2,y+15,{align:"center"});
+    setFont(6,"normal",C.dim); text(kpi.sub,kx+kpiW/2,y+20,{align:"center"});
   });
   y += 28;
 
-  const vizH = 50;
-  setFill(C.surface); rect(margin, y, W - margin*2, vizH, 3);
-  const maxScrW = 80, maxScrH = 40, aspect = totalWidth / totalHeight;
-  let scrW = maxScrW, scrH = maxScrW / aspect;
-  if (scrH > maxScrH) { scrH = maxScrH; scrW = maxScrH * aspect; }
-  const scrX = margin + (W - margin*2)/2 - scrW/2;
-  const scrY = y + (vizH - scrH) / 2;
-  const cellW = scrW / pW, cellH = scrH / pH;
-  for (let row = 0; row < pH; row++) {
-    for (let col = 0; col < pW; col++) {
-      const cx = scrX + col * cellW + 0.4, cy = scrY + row * cellH + 0.4;
-      const t = col / Math.max(pW-1, 1);
-      setFill([Math.round(124 - t*80), Math.round(111 + t*50), Math.round(255 - t*50)]);
-      rect(cx, cy, cellW - 0.8, cellH - 0.8, 0.5);
-    }
+  const vizH=50; setFill(C.surface); rect(margin,y,W-margin*2,vizH,3);
+  const maxScrW=80,maxScrH=40,aspect=totalWidth/totalHeight;
+  let scrW=maxScrW,scrH=maxScrW/aspect;
+  if(scrH>maxScrH){scrH=maxScrH;scrW=maxScrH*aspect;}
+  const scrX=margin+(W-margin*2)/2-scrW/2, scrY=y+(vizH-scrH)/2;
+  const cellW=scrW/pW,cellH=scrH/pH;
+  for(let row=0;row<pH;row++) for(let col=0;col<pW;col++) {
+    const cx=scrX+col*cellW+0.4,cy=scrY+row*cellH+0.4,t=col/Math.max(pW-1,1);
+    setFill([Math.round(124-t*80),Math.round(111+t*50),Math.round(255-t*50)]);
+    rect(cx,cy,cellW-0.8,cellH-0.8,0.5);
   }
-  setDraw(C.blue); doc.setLineWidth(0.5); doc.roundedRect(scrX, scrY, scrW, scrH, 1.5, 1.5, "S");
-  setFont(7, "bold", C.muted); text(`${totalWidth.toFixed(2)} m · ${rW} px`, scrX + scrW/2, scrY - 4, { align:"center" });
-  const bx = scrX + scrW + 8, by = scrY;
-  [
-    { label:"Diagonale", val:`${diagonal.toFixed(0)}"` },
-    { label:"Recul min.", val:`${viewMin.toFixed(1)} m` },
-    { label:"Optimal",   val:`${viewOpt.toFixed(1)} m` },
-    { label:"Qualité",   val:quality.label },
-  ].forEach((b, i) => {
-    setFill(C.surface2); setDraw(C.blue); doc.roundedRect(bx, by + i * 10, 38, 8, 1.5, 1.5, "FD");
-    setFont(6, "normal", C.muted); text(b.label, bx + 3, by + i*10 + 4);
-    setFont(7, "bold", C.text); text(b.val, bx + 38 - 3, by + i*10 + 4, { align:"right" });
+  setDraw(C.blue); doc.setLineWidth(0.5); doc.roundedRect(scrX,scrY,scrW,scrH,1.5,1.5,"S");
+  setFont(7,"bold",C.muted); text(`${totalWidth.toFixed(2)} m · ${rW} px`,scrX+scrW/2,scrY-4,{align:"center"});
+  const bx=scrX+scrW+8,by=scrY;
+  [{label:"Diagonale",val:`${diagonal.toFixed(0)}"`},{label:"Recul min.",val:`${viewMin.toFixed(1)} m`},
+   {label:"Optimal",val:`${viewOpt.toFixed(1)} m`},{label:"Qualité",val:quality.label}].forEach((b,i)=>{
+    setFill(C.surface2); setDraw(C.blue); doc.roundedRect(bx,by+i*10,38,8,1.5,1.5,"FD");
+    setFont(6,"normal",C.muted); text(b.label,bx+3,by+i*10+4);
+    setFont(7,"bold",C.text); text(b.val,bx+38-3,by+i*10+4,{align:"right"});
   });
-  y += vizH + 8;
+  y += vizH+8;
 
-  const drawSection = (title, rows, x, startY, w) => {
-    setFill(C.blue); rect(x, startY, 3, rows.length * 6.5 + 7, 0);
-    setFill(C.surface2); rect(x + 3, startY, w - 3, 7, 0);
-    setFont(7, "bold", C.text); text(title, x + 6, startY + 5);
-    let ty = startY + 7;
-    rows.forEach(([k, v], i) => {
-      setFill(i % 2 === 0 ? C.surface : C.surface2); rect(x + 3, ty, w - 3, 6.5, 0);
-      setDraw([...C.blue, 0.1]); doc.setLineWidth(0.15); doc.rect(x + 3, ty, w - 3, 6.5, "S");
-      setFont(6.5, "normal", C.muted); text(k, x + 6, ty + 4.5);
-      setFont(6.5, "bold", C.text); text(v, x + w - 3, ty + 4.5, { align:"right" });
-      ty += 6.5;
+  const drawSection=(title,rows,x,startY,w)=>{
+    setFill(C.blue); rect(x,startY,3,rows.length*6.5+7,0);
+    setFill(C.surface2); rect(x+3,startY,w-3,7,0);
+    setFont(7,"bold",C.text); text(title,x+6,startY+5);
+    let ty=startY+7;
+    rows.forEach(([k,v],i)=>{
+      setFill(i%2===0?C.surface:C.surface2); rect(x+3,ty,w-3,6.5,0);
+      setDraw([...C.blue,0.1]); doc.setLineWidth(0.15); doc.rect(x+3,ty,w-3,6.5,"S");
+      setFont(6.5,"normal",C.muted); text(k,x+6,ty+4.5);
+      setFont(6.5,"bold",C.text); text(v,x+w-3,ty+4.5,{align:"right"});
+      ty+=6.5;
     });
     return ty;
   };
 
-  const col1x = margin, col2x = margin + colW + 8;
-  const endLeft1 = drawSection("ÉCRAN", [
-    ["Panneaux (L × H)", `${pW} × ${pH} = ${totalPanels} unités`],
-    ["Dimensions réelles", `${totalWidth.toFixed(3)} × ${totalHeight.toFixed(3)} m`],
-    ["Résolution totale", `${rW} × ${rH} px`],
-    ["Mégapixels", `${(totalPixels/1000000).toFixed(3)} Mpx`],
-    ["Ratio d'image", getRatio(rW, rH)],
-    ["Densité pixels", `${pixDensity.toLocaleString()} px/m²`],
-    ["Surface active", `${surface.toFixed(3)} m²`],
-    ["Poids total", `${totalWeight.toFixed(1)} kg`],
-    ["Qualité image", quality.label],
-  ], col1x, y, colW);
-  const endRight1 = drawSection("PRODUIT", [
-    ["Référence", selected.panel_ref],
-    ["Marque", selected.marque || "—"],
-    ["Type LED", selected.type_led || "—"],
-    ["Pitch pixel", `${selected.pixel_pitch_mm} mm`],
-    ["Dimensions cabinet", `${Math.round(selected.panel_width_m*100)} × ${Math.round(selected.panel_height_m*100)} cm`],
-    ["Résolution cabinet", `${selected.resolution_w} × ${selected.resolution_h} px`],
-    ["Poids unitaire", `${selected.weight_kgs} kg`],
-    ["Luminosité", `${selected.nits} nits`],
-    ["Refresh rate", `${selected.refresh_rate_hz} Hz`],
-  ], col2x, y, colW);
-  y = Math.max(endLeft1, endRight1) + 8;
+  const col1x=margin,col2x=margin+colW+8;
+  const endLeft1=drawSection("ÉCRAN",[
+    ["Panneaux (L × H)",`${pW} × ${pH} = ${totalPanels} unités`],
+    ["Dimensions réelles",`${totalWidth.toFixed(3)} × ${totalHeight.toFixed(3)} m`],
+    ["Résolution totale",`${rW} × ${rH} px`],
+    ["Mégapixels",`${(totalPixels/1000000).toFixed(3)} Mpx`],
+    ["Ratio d'image",getRatio(rW,rH)],
+    ["Densité pixels",`${pixDensity.toLocaleString()} px/m²`],
+    ["Surface active",`${surface.toFixed(3)} m²`],
+    ["Poids total",`${totalWeight.toFixed(1)} kg`],
+    ["Qualité image",quality.label],
+  ],col1x,y,colW);
+  const endRight1=drawSection("PRODUIT",[
+    ["Référence",selected.panel_ref],
+    ["Marque",selected.marque||"—"],
+    ["Type LED",selected.type_led||"—"],
+    ["Pitch pixel",`${selected.pixel_pitch_mm} mm`],
+    ["Dimensions cabinet",`${Math.round(selected.panel_width_m*100)} × ${Math.round(selected.panel_height_m*100)} cm`],
+    ["Résolution cabinet",`${selected.resolution_w} × ${selected.resolution_h} px`],
+    ["Poids unitaire",`${selected.weight_kgs} kg`],
+    ["Luminosité",`${selected.nits} nits`],
+    ["Refresh rate",`${selected.refresh_rate_hz} Hz`],
+  ],col2x,y,colW);
+  y=Math.max(endLeft1,endRight1)+8;
 
-  const endLeft2 = drawSection("ÉLECTRIQUE", [
-    ["Conso max totale", `${Math.round(totalPowerMax)} W`],
-    ["Conso moy. totale", `${Math.round(totalPowerAvg)} W`],
-    ["Puissance (moy.)", `${kW.toFixed(3)} kW`],
-    ["BTU/heure", `${BTU.toFixed(0)} BTU/h`],
-    ["Coût/an", `${(costDay*365).toFixed(0)} €`],
-  ], col1x, y, colW);
-  const endRight2 = drawSection("INSTALLATION", [
-    ["Lignes électriques", `${powerLines} ligne(s)`],
-    ["Ports RJ45 requis", `${rj45Needed} port(s)`],
-    ["Recul minimum", `${viewMin.toFixed(2)} m`],
-    ["Recul optimal", `${viewOpt.toFixed(2)} m`],
-    ["Poids total", `${totalWeight.toFixed(1)} kg`],
-    ["Diagonale", `${diagonal.toFixed(1)}"`],
-  ], col2x, y, colW);
-  y = Math.max(endLeft2, endRight2) + 8;
+  const endLeft2=drawSection("ÉLECTRIQUE",[
+    ["Conso max totale",`${Math.round(totalPowerMax)} W`],
+    ["Conso moy. totale",`${Math.round(totalPowerAvg)} W`],
+    ["Puissance (moy.)",`${kW.toFixed(3)} kW`],
+    ["BTU/heure",`${BTU.toFixed(0)} BTU/h`],
+    ["Coût/an",`${(costDay*365).toFixed(0)} €`],
+  ],col1x,y,colW);
+  const endRight2=drawSection("INSTALLATION",[
+    ["Lignes électriques",`${powerLines} ligne(s)`],
+    ["Ports RJ45 requis",`${rj45Needed} port(s)`],
+    ["Recul minimum",`${viewMin.toFixed(2)} m`],
+    ["Recul optimal",`${viewOpt.toFixed(2)} m`],
+    ["Poids total",`${totalWeight.toFixed(1)} kg`],
+    ["Diagonale",`${diagonal.toFixed(1)}"`],
+  ],col2x,y,colW);
+  y=Math.max(endLeft2,endRight2)+8;
 
-  const pct = totalPowerAvg / totalPowerMax;
-  setFill(C.surface2); rect(margin, y, W - margin*2, 18, 2);
-  setDraw(C.blue); doc.roundedRect(margin, y, W - margin*2, 18, 2, 2, "S");
-  setFont(7, "bold", C.muted); text("CHARGE MOYENNE VS MAX", margin + 4, y + 6);
-  setFont(7, "bold", C.text); text(`${Math.round(pct*100)}%`, W - margin - 4, y + 6, { align:"right" });
-  setFill(C.surface); rect(margin + 4, y + 9, W - margin*2 - 8, 5, 2);
-  const barW2 = (W - margin*2 - 8) * pct;
-  setFill(C.green); rect(margin + 4, y + 9, barW2 * 0.5, 5, 0);
-  setFill(C.blue); rect(margin + 4 + barW2 * 0.5, y + 9, barW2 * 0.5, 5, 0);
-  y += 24;
+  const pct=totalPowerAvg/totalPowerMax;
+  setFill(C.surface2); rect(margin,y,W-margin*2,18,2);
+  setDraw(C.blue); doc.roundedRect(margin,y,W-margin*2,18,2,2,"S");
+  setFont(7,"bold",C.muted); text("CHARGE MOYENNE VS MAX",margin+4,y+6);
+  setFont(7,"bold",C.text); text(`${Math.round(pct*100)}%`,W-margin-4,y+6,{align:"right"});
+  setFill(C.surface); rect(margin+4,y+9,W-margin*2-8,5,2);
+  const barW2=(W-margin*2-8)*pct;
+  setFill(C.green); rect(margin+4,y+9,barW2*0.5,5,0);
+  setFill(C.blue); rect(margin+4+barW2*0.5,y+9,barW2*0.5,5,0);
+  y+=24;
 
-  const checks = [
-    { ok: powerLines <= 4,   txt: `${powerLines} ligne(s) électrique(s) — ${powerLines<=4?"Standard (OK)":"Prévoir tableau dédié"}` },
-    { ok: rj45Needed <= 8,   txt: `${rj45Needed} port(s) RJ45 — ${rj45Needed<=8?"Switch standard 8p (OK)":"Switch 16p requis"}` },
-    { ok: totalWeight < 300, txt: `${totalWeight.toFixed(0)} kg total — ${totalWeight<300?"Structure légère (OK)":"Renforcement requis"}` },
-    { ok: true,              txt: `Recul optimal recommandé : ${viewOpt.toFixed(1)} m minimum` },
+  const checks=[
+    {ok:powerLines<=4,  txt:`${powerLines} ligne(s) — ${powerLines<=4?"Standard (OK)":"Prévoir tableau dédié"}`},
+    {ok:rj45Needed<=8,  txt:`${rj45Needed} port(s) RJ45 — ${rj45Needed<=8?"Switch standard 8p (OK)":"Switch 16p requis"}`},
+    {ok:totalWeight<300,txt:`${totalWeight.toFixed(0)} kg — ${totalWeight<300?"Structure légère (OK)":"Renforcement requis"}`},
+    {ok:true,           txt:`Recul optimal recommandé : ${viewOpt.toFixed(1)} m minimum`},
   ];
-  setFill(C.surface2); rect(margin, y, W - margin*2, 10 + checks.length * 8, 2);
-  setDraw(C.blue); doc.roundedRect(margin, y, W - margin*2, 10 + checks.length * 8, 2, 2, "S");
-  setFont(7, "bold", C.muted); text("CHECKLIST INSTALLATION", margin + 4, y + 6);
-  y += 10;
-  checks.forEach((c) => {
-    setFill(c.ok ? C.green : C.orange); doc.circle(margin + 6, y + 2.5, 2, "F");
-    setFont(7, c.ok ? "normal" : "bold", c.ok ? C.muted : C.orange); text(c.txt, margin + 12, y + 4);
-    y += 8;
+  setFill(C.surface2); rect(margin,y,W-margin*2,10+checks.length*8,2);
+  setDraw(C.blue); doc.roundedRect(margin,y,W-margin*2,10+checks.length*8,2,2,"S");
+  setFont(7,"bold",C.muted); text("CHECKLIST INSTALLATION",margin+4,y+6);
+  y+=10;
+  checks.forEach(c=>{
+    setFill(c.ok?C.green:C.orange); doc.circle(margin+6,y+2.5,2,"F");
+    setFont(7,c.ok?"normal":"bold",c.ok?C.muted:C.orange); text(c.txt,margin+12,y+4);
+    y+=8;
   });
 
-  setFill(C.dark); rect(0, H - 12, W, 12, 0);
-  setFill(C.blue); rect(0, H - 12, W, 1.5, 0);
-  setFont(6.5, "normal", C.dim);
-  text("LED Calculator · Configurateur professionnel", margin, H - 5);
-  text(`Généré le ${new Date().toLocaleDateString("fr-FR")} · ${selected.panel_ref} · ${rW}×${rH}px`, W - margin, H - 5, { align:"right" });
+  setFill(C.dark); rect(0,H-12,W,12,0);
+  setFill(C.blue); rect(0,H-12,W,1.5,0);
+  setFont(6.5,"normal",C.dim);
+  text("LED Calculator · Configurateur professionnel",margin,H-5);
+  text(`Généré le ${new Date().toLocaleDateString("fr-FR")} · ${selected.panel_ref} · ${rW}×${rH}px`,W-margin,H-5,{align:"right"});
 
   doc.save(`LED_Report_${selected.panel_ref}_${rW}x${rH}.pdf`);
 }
 
-// ── MAIN ──────────────────────────────────────────────────────────────────────
+// ── COMPOSANT PRINCIPAL ───────────────────────────────────────────────────────
 export default function LEDCalculator({ onAdmin }) {
-  // Démarre avec les produits statiques, fusionne Supabase si disponible
-  const [products, setProducts] = useState(STATIC_PRODUCTS);
+  const [products, setProducts]       = useState(STATIC_PRODUCTS);
   const [selIdx, setSelIdx]           = useState(0);
   const [brandFilter, setBrandFilter] = useState("all");
   const [sizeFilter, setSizeFilter]   = useState("60x34");
@@ -664,38 +642,41 @@ export default function LEDCalculator({ onAdmin }) {
   const [activeTab, setActiveTab]     = useState("product");
   const [pdfLoading, setPdfLoading]   = useState(false);
   const vizRef = useRef(null);
-  const [vizSize, setVizSize] = useState({ w: 600, h: 260 });
+  const [vizSize, setVizSize]         = useState({ w: 600, h: 260 });
 
-  // Fusion optionnelle avec Supabase
+  // Fusion Supabase + statiques
   useEffect(() => {
-    try {
-      // eslint-disable-next-line
-      const { supabase } = require("./supabaseClient");
-      supabase.from("products").select("*").eq("is_active", true).order("marque").order("panel_ref")
-        .then(({ data }) => {
-          if (data && data.length > 0) {
-            const supabaseRefs = new Set(data.map(p => p.panel_ref));
-            const staticOnly = STATIC_PRODUCTS.filter(p => !supabaseRefs.has(p.panel_ref));
-            setProducts([...staticOnly, ...data].sort((a, b) => (a.marque||"").localeCompare(b.marque||"")));
-          }
-        });
-    } catch {
-      // Pas de Supabase — les statiques suffisent
-    }
+    if (!supabase) return; // pas de client — on reste sur les statiques
+    supabase
+      .from("products")
+      .select("*")
+      .eq("is_active", true)
+      .order("marque")
+      .order("panel_ref")
+      .then(({ data, error }) => {
+        if (error || !data || data.length === 0) return;
+        // Garde les QSTECH statiques + tout ce qui vient de Supabase (sans doublon)
+        const supabaseRefs = new Set(data.map(p => p.panel_ref));
+        const staticOnly   = STATIC_PRODUCTS.filter(p => !supabaseRefs.has(p.panel_ref));
+        const merged       = [...staticOnly, ...data].sort((a, b) =>
+          (a.marque || "").localeCompare(b.marque || "") || a.panel_ref.localeCompare(b.panel_ref)
+        );
+        setProducts(merged);
+      });
   }, []);
 
   useEffect(() => {
-    const styleTag = document.createElement("style");
-    styleTag.textContent = css;
-    document.head.appendChild(styleTag);
-    return () => document.head.removeChild(styleTag);
+    const tag = document.createElement("style");
+    tag.textContent = css;
+    document.head.appendChild(tag);
+    return () => document.head.removeChild(tag);
   }, []);
 
   useEffect(() => {
     if (!window.jspdf) {
-      const script = document.createElement("script");
-      script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-      document.head.appendChild(script);
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+      document.head.appendChild(s);
     }
   }, []);
 
@@ -705,25 +686,27 @@ export default function LEDCalculator({ onAdmin }) {
     return () => obs.disconnect();
   }, []);
 
-  const brands = ["all", ...new Set(products.map(p => p.marque).filter(Boolean))];
+  // Filtrage
+  const brands   = ["all", ...new Set(products.map(p => p.marque).filter(Boolean))];
   const filtered = products.filter(p => {
     const matchBrand = brandFilter === "all" || p.marque === brandFilter;
     const pw = Math.round(p.panel_width_m * 100);
     const ph = Math.round(p.panel_height_m * 100);
-    const matchSize = sizeFilter === "all"
-      ? true
-      : sizeFilter === "60x34" ? (Math.abs(p.panel_width_m - 0.6) < 0.01 && Math.abs(p.panel_height_m - 0.337) < 0.01)
-      : sizeFilter === "50x100" ? (pw === 50 && ph === 100) || (pw === 100 && ph === 50)
-      : sizeFilter === "50x50"  ? (pw === 50 && ph === 50)
-      : !((pw === 50 && ph === 100) || (pw === 100 && ph === 50) || (pw === 50 && ph === 50));
+    const matchSize =
+      sizeFilter === "all"    ? true :
+      sizeFilter === "60x34"  ? (Math.abs(p.panel_width_m - 0.6) < 0.01 && Math.abs(p.panel_height_m - 0.337) < 0.01) :
+      sizeFilter === "50x100" ? ((pw === 50 && ph === 100) || (pw === 100 && ph === 50)) :
+      sizeFilter === "50x50"  ? (pw === 50 && ph === 50) :
+      !((pw === 50 && ph === 100) || (pw === 100 && ph === 50) || (pw === 50 && ph === 50));
     return matchBrand && matchSize;
   });
-  const selected = filtered[selIdx] || filtered[0] || products[0];
+  const selected = filtered[Math.min(selIdx, filtered.length - 1)] || filtered[0] || products[0];
 
+  // Calculs
   const result = computeLED(selected, {
     width: Number(width)||0, height: Number(height)||0,
     panelsW: Number(panelsW)||1, panelsH: Number(panelsH)||1,
-    resW: Number(resW)||1920, resH: Number(resH)||1080
+    resW: Number(resW)||1920, resH: Number(resH)||1080,
   }, mode);
 
   const { totalWidth, totalHeight, resW: rW, resH: rH, totalPixels, surface,
@@ -741,7 +724,7 @@ export default function LEDCalculator({ onAdmin }) {
   const costDay     = kW * 0.22 * 10;
   const pixDensity  = surface ? Math.round(totalPixels / surface) : 0;
 
-  const PAD = 80;
+  const PAD  = 80;
   const safeW = totalWidth || 1, safeH = totalHeight || 1;
   const scale = Math.min((vizSize.w - PAD * 2) / safeW, (vizSize.h - PAD) / safeH);
   const scrW  = Math.max(40, safeW * scale);
@@ -767,43 +750,39 @@ export default function LEDCalculator({ onAdmin }) {
     setPdfLoading(false);
   };
 
+  const chevron = (
+    <span className="product-select-chevron">
+      <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+        <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </span>
+  );
+
   return (
     <div className="led-app">
       {/* TOPBAR */}
       <div className="topbar">
         <div className="topbar-brand">
           <div className="topbar-logo">
-            <div className="topbar-logo-cell"></div>
-            <div className="topbar-logo-cell dim"></div>
-            <div className="topbar-logo-cell dim"></div>
-            <div className="topbar-logo-cell"></div>
+            <div className="topbar-logo-cell" /><div className="topbar-logo-cell dim" />
+            <div className="topbar-logo-cell dim" /><div className="topbar-logo-cell" />
           </div>
           <div>
             <div className="topbar-title">LED Calculator</div>
             <div className="topbar-subtitle">Configurateur professionnel</div>
           </div>
         </div>
+
         <div className="topbar-kpis">
-          <div className="topbar-kpi">
-            <div className="topbar-kpi-label">Résolution</div>
-            <div className="topbar-kpi-value">{rW} × {rH} px</div>
-          </div>
+          <div className="topbar-kpi"><div className="topbar-kpi-label">Résolution</div><div className="topbar-kpi-value">{rW} × {rH} px</div></div>
           <div className="topbar-sep" />
-          <div className="topbar-kpi">
-            <div className="topbar-kpi-label">Surface</div>
-            <div className="topbar-kpi-value">{surface.toFixed(2)} m²</div>
-          </div>
+          <div className="topbar-kpi"><div className="topbar-kpi-label">Surface</div><div className="topbar-kpi-value">{surface.toFixed(2)} m²</div></div>
           <div className="topbar-sep" />
-          <div className="topbar-kpi">
-            <div className="topbar-kpi-label">Panneaux</div>
-            <div className="topbar-kpi-value">{pW} × {pH} = {totalPanels} u.</div>
-          </div>
+          <div className="topbar-kpi"><div className="topbar-kpi-label">Panneaux</div><div className="topbar-kpi-value">{pW} × {pH} = {totalPanels} u.</div></div>
           <div className="topbar-sep" />
-          <div className="topbar-kpi">
-            <div className="topbar-kpi-label">Poids</div>
-            <div className="topbar-kpi-value">{totalWeight.toFixed(0)} kg</div>
-          </div>
+          <div className="topbar-kpi"><div className="topbar-kpi-label">Poids</div><div className="topbar-kpi-value">{totalWeight.toFixed(0)} kg</div></div>
         </div>
+
         <div className="topbar-right">
           <div className="topbar-badge" style={{ color: quality.color, borderColor: quality.color + "55", background: quality.color + "18" }}>
             {quality.label}
@@ -828,9 +807,7 @@ export default function LEDCalculator({ onAdmin }) {
                 <option value="all">Toutes les marques</option>
                 {brands.filter(b => b !== "all").map(b => <option key={b} value={b}>{b}</option>)}
               </select>
-              <span className="product-select-chevron">
-                <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </span>
+              {chevron}
             </div>
           </div>
 
@@ -844,9 +821,7 @@ export default function LEDCalculator({ onAdmin }) {
                 <option value="50x50">50 × 50 cm</option>
                 <option value="other">Autres formats</option>
               </select>
-              <span className="product-select-chevron">
-                <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </span>
+              {chevron}
             </div>
           </div>
 
@@ -858,9 +833,7 @@ export default function LEDCalculator({ onAdmin }) {
                 </option>
               ))}
             </select>
-            <span className="product-select-chevron">
-              <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </span>
+            {chevron}
           </div>
 
           <div className="section-header">Mode de saisie</div>
@@ -869,7 +842,7 @@ export default function LEDCalculator({ onAdmin }) {
               <button key={m.id} className={`mode-btn ${mode === m.id ? "active" : ""}`} onClick={() => {
                 if (m.id === "panels") { setPanelsW(result.panelsW); setPanelsH(result.panelsH); }
                 else if (m.id === "resolution") { setResW(result.resW); setResH(result.resH); }
-                else if (m.id === "dimensions") { setWidth(result.totalWidth.toFixed(2)); setHeight(result.totalHeight.toFixed(2)); }
+                else { setWidth(result.totalWidth.toFixed(2)); setHeight(result.totalHeight.toFixed(2)); }
                 setMode(m.id);
               }}>
                 <div className="mode-icon">{m.icon}</div>
@@ -896,9 +869,9 @@ export default function LEDCalculator({ onAdmin }) {
           <div className="section-header">Synthèse</div>
           <div className="summary-grid">
             {[
-              { label: "Panneaux",   value: `${pW} × ${pH}`,                                         sub: `= ${totalPanels} total`,   accent: "#e8ff47" },
-              { label: "Dimensions", value: `${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)} m`, sub: `${surface.toFixed(2)} m²`, accent: "#47c4ff" },
-              { label: "Résolution", value: `${(totalPixels/1000000).toFixed(1)} Mpx`,                sub: `${rW}×${rH}`,              accent: "#47c4ff" },
+              { label: "Panneaux",   value: `${pW} × ${pH}`,                                         sub: `= ${totalPanels} total`,      accent: "#e8ff47" },
+              { label: "Dimensions", value: `${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)} m`, sub: `${surface.toFixed(2)} m²`,    accent: "#47c4ff" },
+              { label: "Résolution", value: `${(totalPixels/1000000).toFixed(1)} Mpx`,                sub: `${rW}×${rH}`,                 accent: "#47c4ff" },
               { label: "Poids",      value: `${totalWeight.toFixed(0)} kg`,                           sub: `${selected.weight_kgs} kg/u`, accent: "#47ffb3" },
             ].map(s => (
               <div key={s.label} className="summary-card" style={{ borderLeftColor: s.accent }}>
@@ -945,7 +918,7 @@ export default function LEDCalculator({ onAdmin }) {
                   </span>
                   <div className="height-line" />
                 </div>
-                <div className="led-screen" style={{ width: scrW, height: scrH, background: "#1c1c1c" }}>
+                <div className="led-screen" style={{ width: scrW, height: scrH, background: "#222" }}>
                   <div className="led-grid" style={{ gridTemplateColumns: `repeat(${pW},1fr)`, gridTemplateRows: `repeat(${pH},1fr)` }}>
                     {Array.from({ length: pW * pH }).map((_, i) => <div key={i} className="led-panel-cell" />)}
                   </div>
@@ -958,10 +931,10 @@ export default function LEDCalculator({ onAdmin }) {
                 <div style={{ width: 64 }} />
               </div>
               <div className="viz-badges">
-                <span className="viz-badge" style={{ color: "#ffb347", background: "rgba(255,179,71,0.1)", borderColor: "rgba(255,179,71,0.25)" }}>👁 Min: {viewMin.toFixed(1)} m</span>
-                <span className="viz-badge" style={{ color: "#47ffb3", background: "rgba(71,255,179,0.1)", borderColor: "rgba(71,255,179,0.25)" }}>✓ Optimal: {viewOpt.toFixed(1)} m</span>
-                <span className="viz-badge" style={{ color: "#47c4ff", background: "rgba(71,196,255,0.1)", borderColor: "rgba(71,196,255,0.25)" }}>📐 {diagonal.toFixed(0)}"</span>
-                <span className="viz-badge" style={{ color: quality.color, background: quality.color + "18", borderColor: quality.color + "44" }}>◈ {quality.label}</span>
+                <span className="viz-badge" style={{ color: "#ffb347", background: "rgba(255,179,71,0.12)", borderColor: "rgba(255,179,71,0.3)" }}>👁 Min: {viewMin.toFixed(1)} m</span>
+                <span className="viz-badge" style={{ color: "#47ffb3", background: "rgba(71,255,179,0.12)", borderColor: "rgba(71,255,179,0.3)" }}>✓ Optimal: {viewOpt.toFixed(1)} m</span>
+                <span className="viz-badge" style={{ color: "#47c4ff", background: "rgba(71,196,255,0.12)", borderColor: "rgba(71,196,255,0.3)" }}>📐 {diagonal.toFixed(0)}"</span>
+                <span className="viz-badge" style={{ color: quality.color, background: quality.color + "20", borderColor: quality.color + "50" }}>◈ {quality.label}</span>
               </div>
             </div>
           </div>
@@ -978,27 +951,27 @@ export default function LEDCalculator({ onAdmin }) {
             {activeTab === "product" && (
               <div>
                 <div className="stat-grid-3">
-                  <StatCard icon="📏" label="Pitch pixel" value={`${selected.pixel_pitch_mm} mm`} sub="Résolution angulaire" accentColor="#e8ff47" />
-                  <StatCard icon="💡" label="Luminosité" value={`${selected.nits} nits`} sub="Luminance max" accentColor="#ffb347" />
-                  <StatCard icon="🔄" label="Refresh rate" value={`${selected.refresh_rate_hz} Hz`} sub="Fréquence rafraîch." accentColor="#47c4ff" />
+                  <StatCard icon="📏" label="Pitch pixel"  value={`${selected.pixel_pitch_mm} mm`} sub="Résolution angulaire" accentColor="#e8ff47" />
+                  <StatCard icon="💡" label="Luminosité"   value={`${selected.nits} nits`}         sub="Luminance max"        accentColor="#ffb347" />
+                  <StatCard icon="🔄" label="Refresh rate" value={`${selected.refresh_rate_hz} Hz`} sub="Fréquence rafraîch."  accentColor="#47c4ff" />
                 </div>
                 <div className="data-table-wrap">
                   <table className="data-table">
                     <thead><tr><th>Paramètre</th><th>Valeur</th></tr></thead>
                     <tbody>
                       {[
-                        ["Référence produit", selected.panel_ref],
-                        ["Type LED", selected.type_led || "—"],
-                        ["Série", selected.brand || "—"],
-                        ["Marque", selected.marque || "—"],
-                        ["Pitch pixel", `${selected.pixel_pitch_mm} mm`],
-                        ["Dimensions cabinet", `${Math.round(selected.panel_width_m*100)} × ${Math.round(selected.panel_height_m*100)} cm`],
-                        ["Résolution cabinet", `${selected.resolution_w} × ${selected.resolution_h} px`],
-                        ["Poids unitaire", `${selected.weight_kgs} kg`],
-                        ["Luminosité", `${selected.nits} nits`],
-                        ["Refresh rate", `${selected.refresh_rate_hz} Hz`],
-                        ["Conso max (unité)", `${selected.power_max_w} W`],
-                        ["Conso moy. (unité)", `${selected.power_avg_w} W`],
+                        ["Référence produit",   selected.panel_ref],
+                        ["Type LED",            selected.type_led || "—"],
+                        ["Série",               selected.brand    || "—"],
+                        ["Marque",              selected.marque   || "—"],
+                        ["Pitch pixel",         `${selected.pixel_pitch_mm} mm`],
+                        ["Dimensions cabinet",  `${Math.round(selected.panel_width_m*100)} × ${Math.round(selected.panel_height_m*100)} cm`],
+                        ["Résolution cabinet",  `${selected.resolution_w} × ${selected.resolution_h} px`],
+                        ["Poids unitaire",      `${selected.weight_kgs} kg`],
+                        ["Luminosité",          `${selected.nits} nits`],
+                        ["Refresh rate",        `${selected.refresh_rate_hz} Hz`],
+                        ["Conso max (unité)",   `${selected.power_max_w} W`],
+                        ["Conso moy. (unité)",  `${selected.power_avg_w} W`],
                       ].map(([k, v]) => <tr key={k}><td>{k}</td><td>{v}</td></tr>)}
                     </tbody>
                   </table>
@@ -1008,25 +981,25 @@ export default function LEDCalculator({ onAdmin }) {
             {activeTab === "screen" && (
               <div>
                 <div className="stat-grid-3">
-                  <StatCard icon="⬛" label="Total panneaux" value={`${pW} × ${pH}`} sub={`= ${totalPanels} cabinets`} accentColor="#47c4ff" />
-                  <StatCard icon="📐" label="Surface totale" value={`${surface.toFixed(2)} m²`} sub={`${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)} m`} accentColor="#e8ff47" />
-                  <StatCard icon="🎯" label="Résolution" value={`${(totalPixels/1000000).toFixed(2)} Mpx`} sub={`${rW} × ${rH} px`} accentColor={quality.color} />
+                  <StatCard icon="⬛" label="Total panneaux" value={`${pW} × ${pH}`}                        sub={`= ${totalPanels} cabinets`}                           accentColor="#47c4ff" />
+                  <StatCard icon="📐" label="Surface totale" value={`${surface.toFixed(2)} m²`}             sub={`${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)} m`} accentColor="#e8ff47" />
+                  <StatCard icon="🎯" label="Résolution"     value={`${(totalPixels/1000000).toFixed(2)} Mpx`} sub={`${rW} × ${rH} px`}                                accentColor={quality.color} />
                 </div>
                 <div className="data-table-wrap">
                   <table className="data-table">
                     <tbody>
                       {[
-                        ["Panneaux (L × H)", `${pW} × ${pH} = ${totalPanels} unités`],
-                        ["Dimensions réelles", `${totalWidth.toFixed(3)} × ${totalHeight.toFixed(3)} m`],
+                        ["Panneaux (L × H)",  `${pW} × ${pH} = ${totalPanels} unités`],
+                        ["Dimensions réelles",`${totalWidth.toFixed(3)} × ${totalHeight.toFixed(3)} m`],
                         ["Résolution totale", `${rW} × ${rH} px`],
-                        ["Mégapixels", `${(totalPixels/1000000).toFixed(3)} Mpx`],
-                        ["Ratio d'image", getRatio(rW, rH)],
-                        ["Densité pixels", `${pixDensity.toLocaleString()} px/m²`],
-                        ["Diagonale", `${diagonal.toFixed(1)} pouces`],
-                        ["Surface active", `${surface.toFixed(3)} m²`],
-                        ["Poids total", `${totalWeight.toFixed(1)} kg`],
-                        ["Recul minimum", `${viewMin.toFixed(2)} m`],
-                        ["Recul optimal", `${viewOpt.toFixed(2)} m`],
+                        ["Mégapixels",        `${(totalPixels/1000000).toFixed(3)} Mpx`],
+                        ["Ratio d'image",     getRatio(rW, rH)],
+                        ["Densité pixels",    `${pixDensity.toLocaleString()} px/m²`],
+                        ["Diagonale",         `${diagonal.toFixed(1)} pouces`],
+                        ["Surface active",    `${surface.toFixed(3)} m²`],
+                        ["Poids total",       `${totalWeight.toFixed(1)} kg`],
+                        ["Recul minimum",     `${viewMin.toFixed(2)} m`],
+                        ["Recul optimal",     `${viewOpt.toFixed(2)} m`],
                       ].map(([k, v]) => <tr key={k}><td>{k}</td><td>{v}</td></tr>)}
                     </tbody>
                   </table>
@@ -1036,9 +1009,9 @@ export default function LEDCalculator({ onAdmin }) {
             {activeTab === "power" && (
               <div>
                 <div className="stat-grid-3">
-                  <StatCard icon="⚡" label="Conso max" value={`${Math.round(totalPowerMax)} W`} sub={`${(totalPowerMax/1000).toFixed(2)} kW`} accentColor="#ff5147" />
+                  <StatCard icon="⚡"  label="Conso max"  value={`${Math.round(totalPowerMax)} W`} sub={`${(totalPowerMax/1000).toFixed(2)} kW`} accentColor="#ff5147" />
                   <StatCard icon="📉" label="Conso moy." value={`${Math.round(totalPowerAvg)} W`} sub={`${(totalPowerAvg/1000).toFixed(2)} kW`} accentColor="#ffb347" />
-                  <StatCard icon="🌡️" label="BTU/h" value={BTU.toFixed(0)} sub="Dissipation thermique" accentColor="#47c4ff" />
+                  <StatCard icon="🌡️" label="BTU/h"      value={BTU.toFixed(0)}                   sub="Dissipation thermique"                    accentColor="#47c4ff" />
                 </div>
                 <div className="power-bar-wrap">
                   <div className="power-bar-header">
@@ -1067,21 +1040,21 @@ export default function LEDCalculator({ onAdmin }) {
             {activeTab === "install" && (
               <div>
                 <div className="stat-grid-2">
-                  <StatCard icon="🔌" label="Lignes électriques" value={`${powerLines}`} sub={`${selected.power_cable_capacity||2200} W/ligne`} accentColor="#e8ff47" />
-                  <StatCard icon="🌐" label="Ports RJ45" value={`${rj45Needed}`} sub={`${(selected.rj45_capacity||535000).toLocaleString()} px/port`} accentColor="#47c4ff" />
+                  <StatCard icon="🔌" label="Lignes électriques" value={`${powerLines}`}   sub={`${selected.power_cable_capacity||2200} W/ligne`}                    accentColor="#e8ff47" />
+                  <StatCard icon="🌐" label="Ports RJ45"         value={`${rj45Needed}`}   sub={`${(selected.rj45_capacity||535000).toLocaleString()} px/port`}       accentColor="#47c4ff" />
                 </div>
                 <div className="data-table-wrap">
                   <table className="data-table">
                     <tbody>
                       {[
-                        ["Nombre de cabinets", `${totalPanels} unités (${pW} × ${pH})`],
-                        ["Poids unitaire", `${selected.weight_kgs} kg`],
-                        ["Poids total", `${totalWeight.toFixed(1)} kg`],
-                        ["Surface totale", `${surface.toFixed(3)} m²`],
-                        ["Lignes électriques", `${powerLines} ligne(s)`],
-                        ["Ports RJ45 requis", `${rj45Needed} port(s)`],
-                        ["Recul min. recommandé", `${viewMin.toFixed(2)} m`],
-                        ["Recul optimal", `${viewOpt.toFixed(2)} m`],
+                        ["Nombre de cabinets",    `${totalPanels} unités (${pW} × ${pH})`],
+                        ["Poids unitaire",         `${selected.weight_kgs} kg`],
+                        ["Poids total",            `${totalWeight.toFixed(1)} kg`],
+                        ["Surface totale",         `${surface.toFixed(3)} m²`],
+                        ["Lignes électriques",     `${powerLines} ligne(s)`],
+                        ["Ports RJ45 requis",      `${rj45Needed} port(s)`],
+                        ["Recul min. recommandé",  `${viewMin.toFixed(2)} m`],
+                        ["Recul optimal",          `${viewOpt.toFixed(2)} m`],
                       ].map(([k, v]) => <tr key={k}><td>{k}</td><td>{v}</td></tr>)}
                     </tbody>
                   </table>
@@ -1089,10 +1062,10 @@ export default function LEDCalculator({ onAdmin }) {
                 <div className="checklist">
                   <div className="checklist-title">Checklist installation</div>
                   {[
-                    { ok: powerLines <= 4,   txt: `${powerLines} ligne(s) électrique(s) — ${powerLines<=4?"✓ Standard":"⚠ Prévoir tableau dédié"}` },
-                    { ok: rj45Needed <= 8,   txt: `${rj45Needed} port(s) RJ45 — ${rj45Needed<=8?"✓ Switch standard 8p":"⚠ Switch 16p ou supérieur"}` },
-                    { ok: totalWeight < 300, txt: `${totalWeight.toFixed(0)} kg total — ${totalWeight<300?"✓ Structure légère":"⚠ Renforcement mural requis"}` },
-                    { ok: true,              txt: `Recul optimal: ${viewOpt.toFixed(1)} m minimum` },
+                    { ok: powerLines <= 4,   txt: `${powerLines} ligne(s) — ${powerLines<=4   ? "✓ Standard"          : "⚠ Prévoir tableau dédié"}` },
+                    { ok: rj45Needed <= 8,   txt: `${rj45Needed} port(s) RJ45 — ${rj45Needed<=8 ? "✓ Switch standard 8p" : "⚠ Switch 16p ou supérieur"}` },
+                    { ok: totalWeight < 300, txt: `${totalWeight.toFixed(0)} kg — ${totalWeight<300 ? "✓ Structure légère"  : "⚠ Renforcement mural requis"}` },
+                    { ok: true,              txt: `Recul optimal : ${viewOpt.toFixed(1)} m minimum` },
                   ].map((item, i) => (
                     <div key={i} className="checklist-item">
                       <div className="checklist-dot" style={{ background: item.ok ? "#47ffb3" : "#ffb347" }} />
