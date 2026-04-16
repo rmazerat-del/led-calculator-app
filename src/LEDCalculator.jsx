@@ -1,23 +1,84 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { supabase } from "./supabaseClient";
 
+// ── BASE DE DONNÉES EMBARQUÉE ─────────────────────────────────────────────────
+// Données QSTECH hardcodées — jamais perdues, même sans Supabase
+const STATIC_PRODUCTS = [
+  {
+    panel_ref: "FX_2725", marque: "QSTECH", brand: "FX", type_led: "SMD",
+    pixel_pitch_mm: 2.5, resolution_w: 240, resolution_h: 135,
+    weight_kgs: 4, nits: 600, power_max_w: 69, power_avg_w: 21,
+    panel_width_m: 0.6, panel_height_m: 0.337, refresh_rate_hz: 3840,
+    is_active: true, power_cable_capacity: 2200, rj45_capacity: 535000,
+  },
+  {
+    panel_ref: "FX_2718", marque: "QSTECH", brand: "FX", type_led: "SMD",
+    pixel_pitch_mm: 1.8, resolution_w: 320, resolution_h: 180,
+    weight_kgs: 4, nits: 600, power_max_w: 78, power_avg_w: 23,
+    panel_width_m: 0.6, panel_height_m: 0.337, refresh_rate_hz: 3840,
+    is_active: true, power_cable_capacity: 2200, rj45_capacity: 535000,
+  },
+  {
+    panel_ref: "FX_2715", marque: "QSTECH", brand: "FX", type_led: "SMD",
+    pixel_pitch_mm: 1.5, resolution_w: 384, resolution_h: 216,
+    weight_kgs: 4, nits: 600, power_max_w: 63, power_avg_w: 20,
+    panel_width_m: 0.6, panel_height_m: 0.337, refresh_rate_hz: 3840,
+    is_active: true, power_cable_capacity: 2200, rj45_capacity: 535000,
+  },
+  {
+    panel_ref: "FX_2712", marque: "QSTECH", brand: "FX", type_led: "SMD",
+    pixel_pitch_mm: 1.2, resolution_w: 480, resolution_h: 270,
+    weight_kgs: 4, nits: 600, power_max_w: 74, power_avg_w: 22,
+    panel_width_m: 0.6, panel_height_m: 0.337, refresh_rate_hz: 3840,
+    is_active: true, power_cable_capacity: 2200, rj45_capacity: 535000,
+  },
+  {
+    panel_ref: "CX_2715", marque: "QSTECH", brand: "CX", type_led: "MiniLED",
+    pixel_pitch_mm: 1.5, resolution_w: 384, resolution_h: 216,
+    weight_kgs: 3.8, nits: 800, power_max_w: 58, power_avg_w: 19.6,
+    panel_width_m: 0.6, panel_height_m: 0.337, refresh_rate_hz: 3840,
+    is_active: true, power_cable_capacity: 2200, rj45_capacity: 535000,
+  },
+  {
+    panel_ref: "CX_2712", marque: "QSTECH", brand: "CX", type_led: "MiniLED",
+    pixel_pitch_mm: 1.2, resolution_w: 480, resolution_h: 270,
+    weight_kgs: 3.8, nits: 800, power_max_w: 66, power_avg_w: 22.2,
+    panel_width_m: 0.6, panel_height_m: 0.337, refresh_rate_hz: 3840,
+    is_active: true, power_cable_capacity: 2200, rj45_capacity: 535000,
+  },
+  {
+    panel_ref: "CX_2709", marque: "QSTECH", brand: "CX", type_led: "MiniLED",
+    pixel_pitch_mm: 0.9, resolution_w: 640, resolution_h: 360,
+    weight_kgs: 3.8, nits: 800, power_max_w: 63, power_avg_w: 21.2,
+    panel_width_m: 0.6, panel_height_m: 0.337, refresh_rate_hz: 3840,
+    is_active: true, power_cable_capacity: 2200, rj45_capacity: 535000,
+  },
+  {
+    panel_ref: "CM_2709", marque: "QSTECH", brand: "CM", type_led: "COB",
+    pixel_pitch_mm: 0.9, resolution_w: 640, resolution_h: 360,
+    weight_kgs: 4, nits: 1000, power_max_w: 53, power_avg_w: 17.7,
+    panel_width_m: 0.6, panel_height_m: 0.337, refresh_rate_hz: 3840,
+    is_active: true, power_cable_capacity: 2200, rj45_capacity: 535000,
+  },
+];
+
+// ── STYLES ────────────────────────────────────────────────────────────────────
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg:          #0f0f0f;
-    --surface:     #1a1a1a;
-    --surface2:    #242424;
-    --surface3:    #2e2e2e;
-    --border:      #2e2e2e;
-    --border-hover:#444444;
+    --bg:          #1c1c1c;
+    --surface:     #252525;
+    --surface2:    #2f2f2f;
+    --surface3:    #3a3a3a;
+    --border:      #3c3c3c;
+    --border-hover:#585858;
     --text:        #f0f0f0;
-    --text-muted:  #888888;
-    --text-dim:    #555555;
+    --text-muted:  #9e9e9e;
+    --text-dim:    #686868;
     --accent:      #e8ff47;
     --accent2:     #47c4ff;
     --green:       #47ffb3;
@@ -31,51 +92,35 @@ const css = `
   body { font-family: var(--font-ui); background: var(--bg); color: var(--text); }
 
   .led-app {
-    width: 100vw;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    background: var(--bg);
-    position: relative;
+    width: 100vw; min-height: 100vh;
+    display: flex; flex-direction: column;
+    background: var(--bg); position: relative;
   }
-
-
 
   /* ── TOPBAR ── */
   .topbar {
-    height: 52px;
-    min-height: 52px;
-    background: rgba(15,15,15,0.96);
+    height: 52px; min-height: 52px;
+    background: rgba(28,28,28,0.97);
     border-bottom: 1px solid var(--border);
     padding: 0 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: relative;
-    z-index: 100;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    display: flex; align-items: center; justify-content: space-between;
+    position: relative; z-index: 100;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     flex-shrink: 0;
   }
   .topbar::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0;
     height: 2px;
-    background: var(--border);
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 50%, var(--green) 100%);
+    opacity: 0.55;
   }
 
   .topbar-brand { display: flex; align-items: center; gap: 10px; }
   .topbar-logo {
-    width: 28px; height: 28px;
-    display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
-    padding: 4px;
-    border: 1px solid var(--border-hover);
-    background: var(--surface2);
-    border-radius: 4px;
-    position: relative;
+    width: 28px; height: 28px; display: grid; grid-template-columns: 1fr 1fr;
+    gap: 2px; padding: 4px; border: 1px solid var(--border-hover);
+    background: var(--surface2); border-radius: 4px;
   }
-
   .topbar-logo-cell { border-radius: 1px; background: var(--accent); }
   .topbar-logo-cell.dim { background: var(--surface3); }
   .topbar-title { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: 0.06em; }
@@ -83,149 +128,100 @@ const css = `
 
   .topbar-kpis { display: flex; align-items: center; gap: 16px; }
   .topbar-kpi { text-align: center; }
-  .topbar-kpi-label { font-size: 9px; color: var(--text-muted); letter-spacing: 0.16em; text-transform: uppercase; font-family: var(--font-mono); }
+  .topbar-kpi-label { font-size: 9px; color: var(--text-dim); letter-spacing: 0.16em; text-transform: uppercase; font-family: var(--font-mono); }
   .topbar-kpi-value { font-size: 12px; font-weight: 600; color: var(--text); margin-top: 2px; font-family: var(--font-mono); }
   .topbar-sep { width: 1px; height: 24px; background: var(--border); }
   .topbar-right { display: flex; align-items: center; gap: 8px; }
 
   .topbar-badge {
-    padding: 4px 10px;
-    border: 1px solid var(--border-hover);
-    font-size: 8px; font-weight: 700;
-    color: var(--text-muted);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    border-radius: 3px;
-    background: var(--surface2);
+    padding: 4px 10px; border: 1px solid; font-size: 8px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase; border-radius: 3px;
     font-family: var(--font-mono);
   }
   .admin-btn {
-    padding: 6px 12px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 8px; font-weight: 600;
-    letter-spacing: 0.14em; text-transform: uppercase;
-    cursor: pointer;
-    font-family: var(--font-ui);
-    border-radius: 3px;
-    transition: all 0.2s;
+    padding: 6px 12px; border: 1px solid var(--border); background: transparent;
+    color: var(--text-muted); font-size: 8px; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer;
+    font-family: var(--font-ui); border-radius: 3px; transition: all 0.2s;
   }
   .admin-btn:hover { border-color: var(--border-hover); color: var(--text); }
   .pdf-topbar-btn {
-    padding: 7px 16px;
-    border: none;
-    background: var(--accent);
-    color: #000;
-    font-size: 9px; font-weight: 700;
-    letter-spacing: 0.12em; text-transform: uppercase;
-    cursor: pointer;
-    font-family: var(--font-ui);
-    border-radius: 8px;
-    transition: all 0.2s;
+    padding: 7px 16px; border: none; background: var(--accent); color: #000;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    cursor: pointer; font-family: var(--font-ui); border-radius: 8px; transition: all 0.2s;
   }
   .pdf-topbar-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(232,255,71,0.3); }
   .pdf-topbar-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* ── MAIN LAYOUT ── */
   .main-layout {
-    display: grid;
-    grid-template-columns: 272px 1fr;
-    flex: 1;
-    min-height: 0;
-    position: relative;
-    z-index: 1;
+    display: grid; grid-template-columns: 272px 1fr;
+    flex: 1; min-height: 0; position: relative; z-index: 1;
     height: calc(100vh - 52px);
   }
 
   /* ── LEFT PANEL ── */
   .left-panel {
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    overflow-y: auto;
-    padding: 16px 14px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border-hover) transparent;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
+    background: var(--surface); border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 16px 14px;
+    scrollbar-width: thin; scrollbar-color: var(--border-hover) transparent;
+    display: flex; flex-direction: column; gap: 0;
   }
   .left-panel::-webkit-scrollbar { width: 4px; }
   .left-panel::-webkit-scrollbar-track { background: transparent; }
   .left-panel::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 4px; }
 
   .section-header {
-    font-size: 10px; font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-    margin-bottom: 8px;
-    margin-top: 14px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--border);
+    font-size: 10px; font-weight: 700; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.2em;
+    margin-bottom: 8px; margin-top: 14px;
+    padding-bottom: 6px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; gap: 6px;
   }
   .section-header::before {
-    content: '';
-    width: 3px; height: 3px;
-    background: var(--accent);
-    border-radius: 50%;
-    flex-shrink: 0;
+    content: ''; width: 3px; height: 3px;
+    background: var(--accent); border-radius: 50%; flex-shrink: 0;
   }
   .section-header:first-child { margin-top: 0; }
 
-  /* Product select */
+  /* Product selects */
   .product-select-wrap { position: relative; margin-bottom: 10px; }
   .product-select {
-    width: 100%;
-    appearance: none;
-    background: var(--surface2);
-    border: 1px solid var(--border);
+    width: 100%; appearance: none;
+    background: var(--surface2); border: 1px solid var(--border);
     padding: 8px 28px 8px 10px;
-    font-family: var(--font-ui);
-    font-size: 12px;
-    color: var(--text);
-    cursor: pointer;
-    outline: none;
-    border-radius: 8px;
-    transition: border-color 0.2s;
+    font-family: var(--font-ui); font-size: 12px; color: var(--text);
+    cursor: pointer; outline: none; border-radius: 8px; transition: border-color 0.2s;
   }
   .product-select:focus { border-color: var(--accent); }
   .product-select option { background: var(--surface2); }
-  .product-select-chevron { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--text-dim); }
+  .product-select-chevron {
+    position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
+    pointer-events: none; color: var(--text-dim);
+  }
 
   /* Mode grid */
   .mode-grid { display: flex; gap: 6px; margin-bottom: 14px; }
   .mode-btn {
-    flex: 1; padding: 8px 4px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    cursor: pointer;
-    text-align: center;
-    background: var(--surface2);
-    font-family: var(--font-ui);
-    transition: all 0.15s;
+    flex: 1; padding: 8px 4px; border: 1px solid var(--border);
+    border-radius: 8px; cursor: pointer; text-align: center;
+    background: var(--surface2); font-family: var(--font-ui); transition: all 0.15s;
   }
-  .mode-btn.active {
-    background: var(--accent);
-    border-color: var(--accent);
-  }
+  .mode-btn.active { background: var(--accent); border-color: var(--accent); }
   .mode-icon { font-size: 14px; margin-bottom: 3px; }
   .mode-label { font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; }
   .mode-btn.active .mode-label { color: #000; }
 
   /* Inputs */
   .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-  .input-label { font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 4px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; font-family: var(--font-mono); }
-
+  .input-label {
+    font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 4px;
+    font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; font-family: var(--font-mono);
+  }
   .spinbox {
-    display: flex; align-items: center;
-    border: 1px solid var(--border);
-    background: var(--surface2);
-    height: 34px;
-    border-radius: 4px;
-    overflow: hidden;
-    transition: border-color 0.2s;
+    display: flex; align-items: center; border: 1px solid var(--border);
+    background: var(--surface2); height: 34px; border-radius: 4px;
+    overflow: hidden; transition: border-color 0.2s;
   }
   .spinbox:focus-within { border-color: var(--accent); }
   .spinbox-btn {
@@ -244,70 +240,37 @@ const css = `
   /* Summary grid */
   .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 12px; }
   .summary-card {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-left: 2px solid var(--accent);
-    padding: 8px 9px;
-    border-radius: 8px;
-    transition: border-color 0.15s;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-left: 2px solid var(--accent); padding: 8px 9px;
+    border-radius: 8px; transition: border-color 0.15s;
   }
   .summary-card:hover { border-color: var(--border-hover); }
-  .summary-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.16em; font-weight: 700; margin-bottom: 3px; font-family: var(--font-mono); }
+  .summary-label { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.16em; font-weight: 700; margin-bottom: 3px; font-family: var(--font-mono); }
   .summary-value { font-size: 12px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; font-family: var(--font-mono); }
   .summary-sub { font-size: 9px; color: var(--text-muted); margin-top: 1px; font-family: var(--font-mono); }
 
   .pdf-btn {
     display: flex; align-items: center; justify-content: center; gap: 7px;
-    width: 100%; padding: 11px 14px;
-    border: none;
-    cursor: pointer; font-family: var(--font-ui); font-size: 10px; font-weight: 700;
-    background: var(--accent);
-    color: #000; letter-spacing: 0.14em; text-transform: uppercase;
-    border-radius: 8px;
-    transition: all 0.15s;
-    margin-top: auto;
+    width: 100%; padding: 11px 14px; border: none; cursor: pointer;
+    font-family: var(--font-ui); font-size: 10px; font-weight: 700;
+    background: var(--accent); color: #000; letter-spacing: 0.14em; text-transform: uppercase;
+    border-radius: 8px; transition: all 0.15s; margin-top: auto;
   }
   .pdf-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(232,255,71,0.3); }
   .pdf-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* ── RIGHT PANEL ── */
-  .right-panel {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-  }
+  .right-panel { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+
   @media (max-width: 768px) {
     html, body, #root { overflow: auto; height: auto; }
     .led-app { min-height: 100vh; height: auto; overflow-y: auto; }
     .topbar { position: sticky; top: 0; }
-    .main-layout {
-      grid-template-columns: 1fr;
-      height: auto;
-      overflow: visible;
-      display: flex;
-      flex-direction: column;
-    }
-    .left-panel {
-      overflow: visible;
-      max-height: none;
-      border-right: none;
-      border-bottom: 1px solid var(--border);
-    }
-    .right-panel {
-      overflow: visible;
-      min-height: 0;
-      height: auto;
-    }
-    .viz-area {
-      flex: 0 0 240px;
-      min-height: 240px;
-    }
-    .tab-content {
-      overflow: visible;
-      height: auto;
-      min-height: 400px;
-    }
+    .main-layout { grid-template-columns: 1fr; height: auto; overflow: visible; display: flex; flex-direction: column; }
+    .left-panel { overflow: visible; max-height: none; border-right: none; border-bottom: 1px solid var(--border); }
+    .right-panel { overflow: visible; min-height: 0; height: auto; }
+    .viz-area { flex: 0 0 240px; min-height: 240px; }
+    .tab-content { overflow: visible; height: auto; min-height: 400px; }
     .topbar-kpis { display: none; }
     .stat-grid-3 { grid-template-columns: 1fr 1fr; }
     .mode-grid { gap: 4px; }
@@ -316,90 +279,63 @@ const css = `
 
   /* ── VIZ AREA ── */
   .viz-area {
-    flex: 0 0 260px;
-    min-height: 0;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
+    flex: 0 0 260px; min-height: 0; background: var(--surface);
+    border-bottom: 1px solid var(--border); position: relative;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
   }
-
   .viz-grid-bg {
     position: absolute; inset: 0;
     background-image:
-      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
     background-size: 28px 28px;
   }
-
   .screen-container { position: relative; z-index: 2; }
   .dim-label { text-align: center; margin-bottom: 6px; display: flex; justify-content: center; align-items: center; gap: 8px; }
-  .dim-line { height: 1px; background: rgba(255,255,255,0.15); }
+  .dim-line { height: 1px; background: rgba(255,255,255,0.18); }
   .dim-text { color: var(--text-muted); font-size: 10px; font-weight: 600; white-space: nowrap; letter-spacing: 0.06em; font-family: var(--font-mono); }
   .dim-diff-ok { color: var(--green); margin-left: 4px; font-size: 8px; }
   .dim-diff-warn { color: var(--orange); margin-left: 4px; font-size: 8px; }
 
   .screen-row { display: flex; align-items: center; gap: 10px; }
   .height-label { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 56px; }
-  .height-line { width: 1px; flex: 1; background: rgba(255,255,255,0.15); }
+  .height-line { width: 1px; flex: 1; background: rgba(255,255,255,0.18); }
   .height-text { color: var(--text-muted); font-size: 10px; font-weight: 600; text-align: center; line-height: 1.5; font-family: var(--font-mono); }
 
   .led-screen {
     position: relative; border-radius: 3px; overflow: hidden;
-    border: 1px solid #444;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    border: 1px solid #555; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
   }
   .led-grid { position: absolute; inset: 0; display: grid; gap: 1px; padding: 1px; }
-  .led-panel-cell { background: transparent; border-radius: 1px; border: 1px solid rgba(255,255,255,0.08); }
+  .led-panel-cell { background: transparent; border-radius: 1px; border: 1px solid rgba(255,255,255,0.1); }
 
   .screen-overlay-tl {
-    position: absolute; top: 7px; left: 7px;
-    background: rgba(0,0,0,0.82);
-    padding: 4px 8px;
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 4px;
-    backdrop-filter: blur(8px);
+    position: absolute; top: 7px; left: 7px; background: rgba(0,0,0,0.75);
+    padding: 4px 8px; border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 4px; backdrop-filter: blur(8px);
   }
   .screen-overlay-title { color: var(--text); font-weight: 700; font-size: 9px; letter-spacing: 0.04em; }
   .screen-overlay-sub { color: var(--text-muted); font-size: 8px; margin-top: 1px; font-family: var(--font-mono); }
   .screen-bottom-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--green), var(--accent), var(--accent2)); }
 
   .viz-badges { text-align: center; margin-top: 8px; display: flex; justify-content: center; gap: 6px; }
-  .viz-badge {
-    font-size: 10px; font-weight: 700; padding: 4px 10px;
-    border: 1px solid; border-radius: 20px;
-    letter-spacing: 0.06em; font-family: var(--font-mono);
-  }
+  .viz-badge { font-size: 10px; font-weight: 700; padding: 4px 10px; border: 1px solid; border-radius: 20px; letter-spacing: 0.06em; font-family: var(--font-mono); }
 
   /* ── TABS ── */
-  .tab-bar {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface2);
-    flex-shrink: 0;
-  }
+  .tab-bar { display: flex; border-bottom: 1px solid var(--border); background: var(--surface2); flex-shrink: 0; }
   .tab-btn {
-    flex: 1; padding: 10px 6px;
-    border: none; cursor: pointer; background: transparent;
-    border-bottom: 2px solid transparent;
-    color: var(--text-dim);
-    font-size: 11px; font-weight: 700;
-    font-family: var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase;
-    transition: all 0.2s;
+    flex: 1; padding: 10px 6px; border: none; cursor: pointer; background: transparent;
+    border-bottom: 2px solid transparent; color: var(--text-dim);
+    font-size: 11px; font-weight: 700; font-family: var(--font-ui);
+    letter-spacing: 0.08em; text-transform: uppercase; transition: all 0.2s;
   }
   .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--surface); }
   .tab-btn:hover:not(.active) { color: var(--text-muted); }
 
   /* ── TAB CONTENT ── */
   .tab-content {
-    flex: 1; overflow-y: auto; padding: 16px 20px;
-    background: var(--surface);
-    scrollbar-width: thin;
-    scrollbar-color: var(--border-hover) transparent;
-    min-height: 0;
+    flex: 1; overflow-y: auto; padding: 16px 20px; background: var(--surface);
+    scrollbar-width: thin; scrollbar-color: var(--border-hover) transparent; min-height: 0;
   }
   .tab-content::-webkit-scrollbar { width: 4px; }
   .tab-content::-webkit-scrollbar-thumb { background: rgba(124,111,255,0.3); border-radius: 4px; }
@@ -407,18 +343,11 @@ const css = `
   /* ── STAT CARDS ── */
   .stat-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
   .stat-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
-
   .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-top: 2px solid var(--accent);
-    padding: 12px 13px;
-    border-radius: 12px;
-    transition: all 0.15s;
-    position: relative;
-    overflow: hidden;
+    background: var(--surface2); border: 1px solid var(--border); border-top: 2px solid var(--accent);
+    padding: 12px 13px; border-radius: 12px; transition: all 0.15s; position: relative; overflow: hidden;
   }
-  .stat-card:hover { border-color: var(--border-hover); box-shadow: 0 4px 20px rgba(0,0,0,0.4); transform: translateY(-1px); }
+  .stat-card:hover { border-color: var(--border-hover); box-shadow: 0 4px 20px rgba(0,0,0,0.3); transform: translateY(-1px); }
   .stat-header { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
   .stat-icon { font-size: 13px; }
   .stat-label { color: var(--text-muted); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; font-family: var(--font-mono); }
@@ -426,76 +355,46 @@ const css = `
   .stat-sub { color: var(--text-muted); font-size: 10px; margin-top: 4px; font-family: var(--font-mono); }
 
   /* ── TABLES ── */
-  .data-table-wrap {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 12px;
-  }
+  .data-table-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
   .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .data-table thead tr { background: var(--surface2); }
-  .data-table th {
-    text-align: left; padding: 9px 14px;
-    color: var(--text-muted); font-weight: 700; font-size: 9px;
-    text-transform: uppercase; letter-spacing: 0.18em;
-    font-family: var(--font-mono);
-  }
+  .data-table thead tr { background: var(--surface3); }
+  .data-table th { text-align: left; padding: 9px 14px; color: var(--text-muted); font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.18em; font-family: var(--font-mono); }
   .data-table th:last-child { text-align: right; }
   .data-table td { padding: 8px 14px; border-top: 1px solid var(--border); }
   .data-table td:first-child { color: var(--text-muted); font-size: 12px; }
   .data-table td:last-child { color: var(--text); font-weight: 600; text-align: right; font-family: var(--font-mono); font-size: 12px; }
-  .data-table tr:hover td { background: var(--surface2); }
+  .data-table tr:hover td { background: var(--surface3); }
 
   /* ── POWER BAR ── */
-  .power-bar-wrap {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px 14px; margin-bottom: 12px;
-  }
+  .power-bar-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
   .power-bar-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
   .power-bar-label { color: var(--text-muted); font-size: 11px; letter-spacing: 0.08em; font-family: var(--font-mono); }
   .power-bar-pct { color: var(--text); font-size: 13px; font-weight: 700; font-family: var(--font-mono); }
-  .power-bar-track { height: 4px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .power-bar-track { height: 4px; background: var(--surface3); border-radius: 4px; overflow: hidden; }
   .power-bar-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--accent)); border-radius: 4px; transition: width 0.6s ease; }
 
   /* ── CHECKLIST ── */
-  .checklist {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px 14px;
-  }
-  .checklist-title { font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 10px; font-family: var(--font-mono); }
+  .checklist { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .checklist-title { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 10px; font-family: var(--font-mono); }
   .checklist-item { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-bottom: 1px solid var(--border); }
   .checklist-item:last-child { border-bottom: none; }
   .checklist-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
   .checklist-text { font-size: 12px; color: var(--text-muted); }
   .checklist-text.warn { color: var(--orange); }
 
-  /* Loading state */
+  /* Loading */
   .loading-screen {
-    width: 100vw; height: 100vh;
-    display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 16px;
-    background: var(--bg);
-    color: var(--text-muted);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: 0.1em;
+    width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px; background: var(--bg);
+    color: var(--text-muted); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em;
   }
-  .loading-dot {
-    display: inline-block;
-    animation: pulse 1.2s ease-in-out infinite;
-  }
+  .loading-dot { display: inline-block; animation: pulse 1.2s ease-in-out infinite; }
   .loading-dot:nth-child(2) { animation-delay: 0.2s; }
   .loading-dot:nth-child(3) { animation-delay: 0.4s; }
   @keyframes pulse { 0%,80%,100% { opacity: 0.3; } 40% { opacity: 1; } }
-
-
 `;
 
+// ── HELPERS ──────────────────────────────────────────────────────────────────
 function computeLED(selected, inputs, mode) {
   let panelsW, panelsH;
   if (mode === "dimensions") {
@@ -556,12 +455,11 @@ function StatCard({ icon, label, value, sub, accentColor }) {
   );
 }
 
+// ── PDF ───────────────────────────────────────────────────────────────────────
 async function generatePDF(selected, result, quality) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const W = 210, H = 297;
-  const margin = 16;
-  const colW = (W - margin * 2 - 8) / 2;
+  const W = 210, H = 297, margin = 16, colW = (W - margin * 2 - 8) / 2;
 
   const { panelsW: pW, panelsH: pH, totalWidth, totalHeight, resW: rW, resH: rH,
     totalPixels, surface, totalPanels, totalPowerMax, totalPowerAvg } = result;
@@ -579,57 +477,39 @@ async function generatePDF(selected, result, quality) {
 
   const C = {
     blue:[124,111,255], blue2:[201,106,255], green:[42,255,163], orange:[255,170,61],
-    red:[255,92,120], pink:[240,106,255], bg:[7,8,15], surface:[13,15,28],
-    surface2:[17,19,37], white:[255,255,255], text:[232,234,246],
-    muted:[123,130,180], dim:[61,68,116], border:[100,120,255],
-    dark:[7,8,15],
+    pink:[240,106,255], bg:[7,8,15], surface:[13,15,28], surface2:[17,19,37],
+    white:[255,255,255], text:[232,234,246], muted:[123,130,180], dim:[61,68,116],
+    border:[100,120,255], dark:[7,8,15],
   };
-
   const setFill = (rgb) => doc.setFillColor(...rgb);
   const setDraw = (rgb) => doc.setDrawColor(...rgb);
-  const setFont = (size, style="normal", rgb=C.text) => {
-    doc.setFontSize(size); doc.setFont("helvetica", style); doc.setTextColor(...rgb);
-  };
-  const rect = (x, y, w, h, r=0, fill=true) => {
-    if (r > 0) doc.roundedRect(x, y, w, h, r, r, fill ? "F" : "S");
-    else doc.rect(x, y, w, h, fill ? "F" : "S");
-  };
-  const line = (x1, y1, x2, y2, rgb=C.border, lw=0.3) => {
-    doc.setLineWidth(lw); setDraw(rgb); doc.line(x1, y1, x2, y2);
-  };
+  const setFont = (size, style="normal", rgb=C.text) => { doc.setFontSize(size); doc.setFont("helvetica", style); doc.setTextColor(...rgb); };
+  const rect = (x, y, w, h, r=0, fill=true) => { if (r > 0) doc.roundedRect(x, y, w, h, r, r, fill ? "F" : "S"); else doc.rect(x, y, w, h, fill ? "F" : "S"); };
   const text = (str, x, y, opts={}) => doc.text(str, x, y, opts);
 
   let y = 0;
-
-  // HEADER
   setFill(C.dark); rect(0, 0, W, 40, 0);
-  // Gradient accent line
   setFill(C.blue); rect(0, 38, W * 0.5, 2, 0);
   setFill(C.blue2); rect(W * 0.5, 38, W * 0.3, 2, 0);
   setFill(C.pink); rect(W * 0.8, 38, W * 0.2, 2, 0);
-
-  setFont(18, "bold", C.white);
-  text("LED Screen Report", margin + 22, 16);
+  setFont(18, "bold", C.white); text("LED Screen Report", margin + 22, 16);
   setFont(8, "normal", C.muted);
   text("Configurateur professionnel · " + new Date().toLocaleDateString("fr-FR", { day:"2-digit", month:"long", year:"numeric" }), margin + 22, 24);
   setFont(7, "bold", C.blue); text(quality.label, W - margin - 4, 20, { align:"right" });
-
   y = 48;
 
-  // MODEL BANNER
   setFill(C.surface2); rect(margin, y, W - margin*2, 14, 3);
   setFill(C.blue); rect(margin, y, 3, 14, 0);
   setFont(10, "bold", C.text); text(selected.panel_ref, margin + 8, y + 9);
   setFont(7.5, "normal", C.muted);
-  text(`P${selected.pixel_pitch_mm} mm  ·  ${selected.nits} nits  ·  ${selected.resolution_w}×${selected.resolution_h} px  ·  ${selected.refresh_rate_hz} Hz`, margin + 38, y + 9);
+  text(`${selected.marque||""}  ·  P${selected.pixel_pitch_mm} mm  ·  ${selected.nits} nits  ·  ${selected.resolution_w}×${selected.resolution_h} px  ·  ${selected.refresh_rate_hz} Hz`, margin + 46, y + 9);
   y += 20;
 
-  // KPI CARDS
   const kpis = [
-    { label:"PANNEAUX",    value:`${pW} × ${pH}`,                                        sub:`${totalPanels} total` },
-    { label:"DIMENSIONS",  value:`${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)}`,  sub:`${surface.toFixed(2)} m²` },
-    { label:"RÉSOLUTION",  value:`${(totalPixels/1000000).toFixed(2)} Mpx`,               sub:`${rW} × ${rH}` },
-    { label:"POIDS TOTAL", value:`${totalWeight.toFixed(0)} kg`,                          sub:`${selected.weight_kgs} kg/unit` },
+    { label:"PANNEAUX",    value:`${pW} × ${pH}`,                                       sub:`${totalPanels} total` },
+    { label:"DIMENSIONS",  value:`${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)}`, sub:`${surface.toFixed(2)} m²` },
+    { label:"RÉSOLUTION",  value:`${(totalPixels/1000000).toFixed(2)} Mpx`,              sub:`${rW} × ${rH}` },
+    { label:"POIDS TOTAL", value:`${totalWeight.toFixed(0)} kg`,                         sub:`${selected.weight_kgs} kg/unit` },
   ];
   const kpiW = (W - margin*2 - 9) / 4;
   kpis.forEach((kpi, i) => {
@@ -643,11 +523,9 @@ async function generatePDF(selected, result, quality) {
   });
   y += 28;
 
-  // SCREEN VIZ
   const vizH = 50;
   setFill(C.surface); rect(margin, y, W - margin*2, vizH, 3);
-  const maxScrW = 80, maxScrH = 40;
-  const aspect = totalWidth / totalHeight;
+  const maxScrW = 80, maxScrH = 40, aspect = totalWidth / totalHeight;
   let scrW = maxScrW, scrH = maxScrW / aspect;
   if (scrH > maxScrH) { scrH = maxScrH; scrW = maxScrH * aspect; }
   const scrX = margin + (W - margin*2)/2 - scrW/2;
@@ -662,8 +540,7 @@ async function generatePDF(selected, result, quality) {
     }
   }
   setDraw(C.blue); doc.setLineWidth(0.5); doc.roundedRect(scrX, scrY, scrW, scrH, 1.5, 1.5, "S");
-  setFont(7, "bold", C.muted);
-  text(`${totalWidth.toFixed(2)} m · ${rW} px`, scrX + scrW/2, scrY - 4, { align:"center" });
+  setFont(7, "bold", C.muted); text(`${totalWidth.toFixed(2)} m · ${rW} px`, scrX + scrW/2, scrY - 4, { align:"center" });
   const bx = scrX + scrW + 8, by = scrY;
   [
     { label:"Diagonale", val:`${diagonal.toFixed(0)}"` },
@@ -706,14 +583,14 @@ async function generatePDF(selected, result, quality) {
   ], col1x, y, colW);
   const endRight1 = drawSection("PRODUIT", [
     ["Référence", selected.panel_ref],
+    ["Marque", selected.marque || "—"],
     ["Type LED", selected.type_led || "—"],
     ["Pitch pixel", `${selected.pixel_pitch_mm} mm`],
-    ["Dimensions cabinet", `${selected.panel_width_m} × ${selected.panel_height_m} m`],
+    ["Dimensions cabinet", `${Math.round(selected.panel_width_m*100)} × ${Math.round(selected.panel_height_m*100)} cm`],
     ["Résolution cabinet", `${selected.resolution_w} × ${selected.resolution_h} px`],
     ["Poids unitaire", `${selected.weight_kgs} kg`],
     ["Luminosité", `${selected.nits} nits`],
     ["Refresh rate", `${selected.refresh_rate_hz} Hz`],
-    ["Conso max", `${selected.power_max_w} W`],
   ], col2x, y, colW);
   y = Math.max(endLeft1, endRight1) + 8;
 
@@ -761,7 +638,6 @@ async function generatePDF(selected, result, quality) {
     y += 8;
   });
 
-  // Footer
   setFill(C.dark); rect(0, H - 12, W, 12, 0);
   setFill(C.blue); rect(0, H - 12, W, 1.5, 0);
   setFont(6.5, "normal", C.dim);
@@ -771,25 +647,41 @@ async function generatePDF(selected, result, quality) {
   doc.save(`LED_Report_${selected.panel_ref}_${rW}x${rH}.pdf`);
 }
 
+// ── MAIN ──────────────────────────────────────────────────────────────────────
 export default function LEDCalculator({ onAdmin }) {
-  const [products, setProducts] = useState([]);
-  const [selIdx, setSelIdx] = useState(0);
+  // Démarre avec les produits statiques, fusionne Supabase si disponible
+  const [products, setProducts] = useState(STATIC_PRODUCTS);
+  const [selIdx, setSelIdx]           = useState(0);
   const [brandFilter, setBrandFilter] = useState("all");
-  const [mode, setMode] = useState("dimensions");
-  const [width, setWidth]   = useState(3);
-  const [height, setHeight] = useState(2);
-  const [panelsW, setPanelsW] = useState(5);
-  const [panelsH, setPanelsH] = useState(3);
-  const [resW, setResW] = useState(1920);
-  const [resH, setResH] = useState(1080);
-  const [activeTab, setActiveTab] = useState("product");
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const [sizeFilter, setSizeFilter]   = useState("60x34");
+  const [mode, setMode]               = useState("dimensions");
+  const [width, setWidth]             = useState(3);
+  const [height, setHeight]           = useState(2);
+  const [panelsW, setPanelsW]         = useState(5);
+  const [panelsH, setPanelsH]         = useState(3);
+  const [resW, setResW]               = useState(1920);
+  const [resH, setResH]               = useState(1080);
+  const [activeTab, setActiveTab]     = useState("product");
+  const [pdfLoading, setPdfLoading]   = useState(false);
   const vizRef = useRef(null);
   const [vizSize, setVizSize] = useState({ w: 600, h: 260 });
 
+  // Fusion optionnelle avec Supabase
   useEffect(() => {
-    supabase.from("products").select("*").eq("is_active", true).order("marque").order("panel_ref")
-      .then(({ data }) => { if (data && data.length > 0) { setProducts(data); setSelIdx(0); } });
+    try {
+      // eslint-disable-next-line
+      const { supabase } = require("./supabaseClient");
+      supabase.from("products").select("*").eq("is_active", true).order("marque").order("panel_ref")
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            const supabaseRefs = new Set(data.map(p => p.panel_ref));
+            const staticOnly = STATIC_PRODUCTS.filter(p => !supabaseRefs.has(p.panel_ref));
+            setProducts([...staticOnly, ...data].sort((a, b) => (a.marque||"").localeCompare(b.marque||"")));
+          }
+        });
+    } catch {
+      // Pas de Supabase — les statiques suffisent
+    }
   }, []);
 
   useEffect(() => {
@@ -814,20 +706,19 @@ export default function LEDCalculator({ onAdmin }) {
   }, []);
 
   const brands = ["all", ...new Set(products.map(p => p.marque).filter(Boolean))];
-  const filtered = brandFilter === "all" ? products : products.filter(p => p.marque === brandFilter);
-  const selected = filtered[selIdx] || filtered[0] || null;
-
-  if (products.length === 0) return (
-    <div className="loading-screen">
-      <div style={{ color: "#e8ff47", fontSize: 20, fontWeight: 700, letterSpacing: "0.1em" }}>LED Calculator</div>
-      <div style={{ display: "flex", gap: 4 }}>
-        <span className="loading-dot" style={{ color: "#e8ff47" }}>●</span>
-        <span className="loading-dot" style={{ color: "#47c4ff" }}>●</span>
-        <span className="loading-dot" style={{ color: "#47ffb3" }}>●</span>
-      </div>
-      <span>Chargement des produits…</span>
-    </div>
-  );
+  const filtered = products.filter(p => {
+    const matchBrand = brandFilter === "all" || p.marque === brandFilter;
+    const pw = Math.round(p.panel_width_m * 100);
+    const ph = Math.round(p.panel_height_m * 100);
+    const matchSize = sizeFilter === "all"
+      ? true
+      : sizeFilter === "60x34" ? (Math.abs(p.panel_width_m - 0.6) < 0.01 && Math.abs(p.panel_height_m - 0.337) < 0.01)
+      : sizeFilter === "50x100" ? (pw === 50 && ph === 100) || (pw === 100 && ph === 50)
+      : sizeFilter === "50x50"  ? (pw === 50 && ph === 50)
+      : !((pw === 50 && ph === 100) || (pw === 100 && ph === 50) || (pw === 50 && ph === 50));
+    return matchBrand && matchSize;
+  });
+  const selected = filtered[selIdx] || filtered[0] || products[0];
 
   const result = computeLED(selected, {
     width: Number(width)||0, height: Number(height)||0,
@@ -914,8 +805,10 @@ export default function LEDCalculator({ onAdmin }) {
           </div>
         </div>
         <div className="topbar-right">
-          <div className="topbar-badge" style={{ color: quality.color, borderColor: quality.color + "55", background: quality.color + "18" }}>{quality.label}</div>
-          <button onClick={onAdmin} className="admin-btn">Admin</button>
+          <div className="topbar-badge" style={{ color: quality.color, borderColor: quality.color + "55", background: quality.color + "18" }}>
+            {quality.label}
+          </div>
+          {onAdmin && <button onClick={onAdmin} className="admin-btn">Admin</button>}
           <button onClick={handlePDF} disabled={pdfLoading} className="pdf-topbar-btn">
             {pdfLoading ? "⏳ Génération…" : "⬇ Exporter PDF"}
           </button>
@@ -927,6 +820,7 @@ export default function LEDCalculator({ onAdmin }) {
         {/* LEFT */}
         <div className="left-panel">
           <div className="section-header">Modèle de panneau</div>
+
           <div style={{ marginBottom: 8 }}>
             <label className="input-label">Marque</label>
             <div className="product-select-wrap">
@@ -939,10 +833,29 @@ export default function LEDCalculator({ onAdmin }) {
               </span>
             </div>
           </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <label className="input-label">Format cabinet</label>
+            <div className="product-select-wrap">
+              <select className="product-select" value={sizeFilter} onChange={e => { setSizeFilter(e.target.value); setSelIdx(0); }}>
+                <option value="all">Tous les formats</option>
+                <option value="60x34">60 × 33,7 cm (QSTECH)</option>
+                <option value="50x100">50 × 100 cm</option>
+                <option value="50x50">50 × 50 cm</option>
+                <option value="other">Autres formats</option>
+              </select>
+              <span className="product-select-chevron">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+
           <div className="product-select-wrap">
             <select className="product-select" value={selIdx} onChange={e => setSelIdx(Number(e.target.value))}>
               {filtered.map((p, i) => (
-                <option key={i} value={i}>{p.panel_ref} — P{p.pixel_pitch_mm} · {p.nits} nits · {p.resolution_w}×{p.resolution_h}px</option>
+                <option key={i} value={i}>
+                  {p.panel_ref} — P{p.pixel_pitch_mm} · {Math.round(p.panel_width_m*100)}×{Math.round(p.panel_height_m*100)}cm · {p.resolution_w}×{p.resolution_h}px · {p.nits}nits
+                </option>
               ))}
             </select>
             <span className="product-select-chevron">
@@ -983,7 +896,7 @@ export default function LEDCalculator({ onAdmin }) {
           <div className="section-header">Synthèse</div>
           <div className="summary-grid">
             {[
-              { label: "Panneaux",   value: `${pW} × ${pH}`,                                         sub: `= ${totalPanels} total`,  accent: "#e8ff47" },
+              { label: "Panneaux",   value: `${pW} × ${pH}`,                                         sub: `= ${totalPanels} total`,   accent: "#e8ff47" },
               { label: "Dimensions", value: `${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)} m`, sub: `${surface.toFixed(2)} m²`, accent: "#47c4ff" },
               { label: "Résolution", value: `${(totalPixels/1000000).toFixed(1)} Mpx`,                sub: `${rW}×${rH}`,              accent: "#47c4ff" },
               { label: "Poids",      value: `${totalWeight.toFixed(0)} kg`,                           sub: `${selected.weight_kgs} kg/u`, accent: "#47ffb3" },
@@ -1003,7 +916,6 @@ export default function LEDCalculator({ onAdmin }) {
 
         {/* RIGHT */}
         <div className="right-panel">
-          {/* VIZ */}
           <div className="viz-area" ref={vizRef}>
             <div className="viz-grid-bg" />
             <div className="screen-container">
@@ -1024,7 +936,7 @@ export default function LEDCalculator({ onAdmin }) {
                   <div className="height-line" />
                   <span className="height-text">
                     {totalHeight.toFixed(2)} m<br />
-                    <span style={{ color: "#3d4474" }}>{rH} px</span>
+                    <span style={{ color: "#686868" }}>{rH} px</span>
                     {mode === "dimensions" && (Number(height)||0) > 0 && (
                       <><br /><span style={{ color: Math.abs(totalHeight-(Number(height)||0)) < 0.01 ? "#47ffb3" : "#ffb347", fontSize: 8 }}>
                         ({(totalHeight-(Number(height)||0)).toFixed(2)}m)
@@ -1033,12 +945,7 @@ export default function LEDCalculator({ onAdmin }) {
                   </span>
                   <div className="height-line" />
                 </div>
-                <div className="led-screen" style={{
-                  width: scrW, height: scrH,
-                  backgroundImage: "url('/screen-content.jpg')",
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }}>
+                <div className="led-screen" style={{ width: scrW, height: scrH, background: "#1c1c1c" }}>
                   <div className="led-grid" style={{ gridTemplateColumns: `repeat(${pW},1fr)`, gridTemplateRows: `repeat(${pH},1fr)` }}>
                     {Array.from({ length: pW * pH }).map((_, i) => <div key={i} className="led-panel-cell" />)}
                   </div>
@@ -1051,23 +958,14 @@ export default function LEDCalculator({ onAdmin }) {
                 <div style={{ width: 64 }} />
               </div>
               <div className="viz-badges">
-                <span className="viz-badge" style={{ color: "#ffb347", background: "rgba(255,179,71,0.1)", borderColor: "rgba(255,179,71,0.25)" }}>
-                  👁 Min: {viewMin.toFixed(1)} m
-                </span>
-                <span className="viz-badge" style={{ color: "#47ffb3", background: "rgba(71,255,179,0.1)", borderColor: "rgba(71,255,179,0.25)" }}>
-                  ✓ Optimal: {viewOpt.toFixed(1)} m
-                </span>
-                <span className="viz-badge" style={{ color: "#47c4ff", background: "rgba(71,196,255,0.1)", borderColor: "rgba(71,196,255,0.25)" }}>
-                  📐 {diagonal.toFixed(0)}"
-                </span>
-                <span className="viz-badge" style={{ color: quality.color, background: quality.color + "18", borderColor: quality.color + "44" }}>
-                  ◈ {quality.label}
-                </span>
+                <span className="viz-badge" style={{ color: "#ffb347", background: "rgba(255,179,71,0.1)", borderColor: "rgba(255,179,71,0.25)" }}>👁 Min: {viewMin.toFixed(1)} m</span>
+                <span className="viz-badge" style={{ color: "#47ffb3", background: "rgba(71,255,179,0.1)", borderColor: "rgba(71,255,179,0.25)" }}>✓ Optimal: {viewOpt.toFixed(1)} m</span>
+                <span className="viz-badge" style={{ color: "#47c4ff", background: "rgba(71,196,255,0.1)", borderColor: "rgba(71,196,255,0.25)" }}>📐 {diagonal.toFixed(0)}"</span>
+                <span className="viz-badge" style={{ color: quality.color, background: quality.color + "18", borderColor: quality.color + "44" }}>◈ {quality.label}</span>
               </div>
             </div>
           </div>
 
-          {/* TABS */}
           <div className="tab-bar">
             {TABS.map(t => (
               <button key={t.id} onClick={() => setActiveTab(t.id)} className={`tab-btn ${activeTab === t.id ? "active" : ""}`}>
@@ -1076,7 +974,6 @@ export default function LEDCalculator({ onAdmin }) {
             ))}
           </div>
 
-          {/* TAB CONTENT */}
           <div className="tab-content">
             {activeTab === "product" && (
               <div>
@@ -1095,7 +992,7 @@ export default function LEDCalculator({ onAdmin }) {
                         ["Série", selected.brand || "—"],
                         ["Marque", selected.marque || "—"],
                         ["Pitch pixel", `${selected.pixel_pitch_mm} mm`],
-                        ["Dimensions cabinet", `${selected.panel_width_m} × ${selected.panel_height_m} m`],
+                        ["Dimensions cabinet", `${Math.round(selected.panel_width_m*100)} × ${Math.round(selected.panel_height_m*100)} cm`],
                         ["Résolution cabinet", `${selected.resolution_w} × ${selected.resolution_h} px`],
                         ["Poids unitaire", `${selected.weight_kgs} kg`],
                         ["Luminosité", `${selected.nits} nits`],
