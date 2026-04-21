@@ -1,16 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-
-// ── IMPORT SUPABASE (avec fallback si absent) ─────────────────────────────────
-let supabase = null;
-try {
-  // eslint-disable-next-line
-  const mod = require("./supabaseClient");
-  supabase = mod.supabase || mod.default || null;
-} catch {
-  // Pas de supabaseClient — on utilise uniquement les données statiques
-}
+import { supabase } from "./supabaseClient";
 
 // ── BASE QSTECH EMBARQUÉE — jamais perdue ─────────────────────────────────────
 const STATIC_PRODUCTS = [
@@ -688,7 +679,7 @@ export default function LEDCalculator({ onAdmin }) {
 
   // Fusion Supabase + statiques
   useEffect(() => {
-    if (!supabase) return; // pas de client — on reste sur les statiques
+    if (!supabase) return;
     supabase
       .from("products")
       .select("*")
@@ -696,8 +687,8 @@ export default function LEDCalculator({ onAdmin }) {
       .order("marque")
       .order("panel_ref")
       .then(({ data, error }) => {
-        if (error || !data || data.length === 0) return;
-        // Garde les QSTECH statiques + tout ce qui vient de Supabase (sans doublon)
+        if (error) { console.error("Supabase error:", error); return; }
+        if (!data || data.length === 0) return;
         const supabaseRefs = new Set(data.map(p => p.panel_ref));
         const staticOnly   = STATIC_PRODUCTS.filter(p => !supabaseRefs.has(p.panel_ref));
         const merged       = [...staticOnly, ...data].sort((a, b) =>
