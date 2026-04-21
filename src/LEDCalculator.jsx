@@ -909,9 +909,9 @@ export default function LEDCalculator({ onAdmin }) {
     { id: "sport",     label: "Sport",     bg: "radial-gradient(ellipse 120% 90% at 50% 110%,#14532d 0%,#052e16 55%,#030a05 100%)" },
     { id: "custom",    label: "Image",     bg: customBg || "oklch(18% 0.028 245)" },
   ];
-  const screenBgStyle = bgPreset === "custom" && customBg
-    ? { backgroundImage: `url(${customBg})`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" }
-    : { background: BG_PRESETS.find(p => p.id === bgPreset)?.bg ?? "oklch(18% 0.028 245)", backgroundSize: "cover", backgroundPosition: "center" };
+  const screenBgStyle = bgPreset === "custom"
+    ? { background: "oklch(18% 0.028 245)" }
+    : { background: BG_PRESETS.find(p => p.id === bgPreset)?.bg ?? "oklch(18% 0.028 245)" };
 
   const handlePDF = async () => {
     if (!window.jspdf) { alert("jsPDF charge encore, réessayez."); return; }
@@ -1121,6 +1121,14 @@ export default function LEDCalculator({ onAdmin }) {
                   <div className="height-line" />
                 </div>
                 <div className="led-screen" style={{ width: scrW, height: scrH, ...screenBgStyle }}>
+                  {bgPreset === "custom" && customBg && (
+                    <img src={customBg} alt="" style={{
+                      position: "absolute", inset: 0,
+                      width: "100%", height: "100%",
+                      objectFit: "cover", objectPosition: "center",
+                      display: "block", zIndex: 0,
+                    }} />
+                  )}
                   <div className="led-grid" style={{ gridTemplateColumns: `repeat(${pW},1fr)`, gridTemplateRows: `repeat(${pH},1fr)` }}>
                     {Array.from({ length: pW * pH }).map((_, i) => (
                       <div key={i} className="led-panel-cell" style={{
