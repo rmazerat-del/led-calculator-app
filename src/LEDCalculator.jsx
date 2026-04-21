@@ -466,10 +466,18 @@ async function generatePDF(selected, result, quality) {
   const pixDensity  = surface ? Math.round(totalPixels / surface) : 0;
 
   const C = {
-    blue:[124,111,255], blue2:[201,106,255], green:[42,255,163], orange:[255,170,61],
-    pink:[240,106,255], bg:[7,8,15], surface:[13,15,28], surface2:[17,19,37],
-    white:[255,255,255], text:[232,234,246], muted:[123,130,180], dim:[61,68,116],
-    border:[100,120,255], dark:[7,8,15],
+    blue:   [37,  99,  235],
+    blue2:  [14,  165, 233],
+    green:  [16,  185, 129],
+    orange: [245, 158, 11],
+    white:  [255, 255, 255],
+    bg:     [240, 242, 245],
+    surface:[247, 248, 250],
+    surface2:[226,230, 236],
+    dark:   [30,  41,  59],
+    text:   [17,  24,  39],
+    muted:  [75,  85,  99],
+    dim:    [156, 163, 175],
   };
   const setFill = (rgb) => doc.setFillColor(...rgb);
   const setDraw = (rgb) => doc.setDrawColor(...rgb);
@@ -477,74 +485,108 @@ async function generatePDF(selected, result, quality) {
   const rect = (x, y, w, h, r=0, fill=true) => { if (r>0) doc.roundedRect(x,y,w,h,r,r,fill?"F":"S"); else doc.rect(x,y,w,h,fill?"F":"S"); };
   const text = (str, x, y, opts={}) => doc.text(str, x, y, opts);
 
+  // ── EN-TÊTE ──
   let y = 0;
-  setFill(C.dark); rect(0,0,W,40,0);
-  setFill(C.blue); rect(0,38,W*0.5,2,0);
-  setFill(C.blue2); rect(W*0.5,38,W*0.3,2,0);
-  setFill(C.pink); rect(W*0.8,38,W*0.2,2,0);
-  setFont(18,"bold",C.white); text("LED Screen Report", margin+22, 16);
+  setFill(C.white); rect(0,0,W,42,0);
+  // Logo 2×2
+  const lx=margin, ly=10, lsz=5, lg=1.5;
+  [[C.blue,C.blue],[C.surface2,C.blue]].forEach((row,ri)=>
+    row.forEach((col,ci)=>{ setFill(col); rect(lx+ci*(lsz+lg),ly+ri*(lsz+lg),lsz,lsz,1); })
+  );
+  setFont(16,"bold",C.text); text("LED Screen Report", lx+lsz*2+lg*2+4, ly+7);
   setFont(8,"normal",C.muted);
-  text("Configurateur professionnel · "+new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"}), margin+22, 24);
-  setFont(7,"bold",C.blue); text(quality.label, W-margin-4, 20, {align:"right"});
+  text("Configurateur professionnel · "+new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"}), lx+lsz*2+lg*2+4, ly+13);
+  // Badge qualité
+  setFill(C.blue); doc.roundedRect(W-margin-22,ly+1,22,10,2,2,"F");
+  setFont(7,"bold",C.white); text(quality.label,W-margin-11,ly+7.5,{align:"center"});
+  // Barre dégradée
+  setFill(C.blue);  rect(0,40,W*0.55,2,0);
+  setFill(C.blue2); rect(W*0.55,40,W*0.28,2,0);
+  setFill(C.green); rect(W*0.83,40,W*0.17,2,0);
   y = 48;
 
-  setFill(C.surface2); rect(margin,y,W-margin*2,14,3);
+  // ── BANDE PRODUIT ──
+  setFill(C.surface); rect(margin,y,W-margin*2,14,2);
+  setDraw(C.surface2); doc.setLineWidth(0.3); doc.roundedRect(margin,y,W-margin*2,14,2,2,"S");
   setFill(C.blue); rect(margin,y,3,14,0);
-  setFont(10,"bold",C.text); text(selected.panel_ref, margin+8, y+9);
-  setFont(7.5,"normal",C.muted);
-  text(`${selected.marque||""}  ·  P${selected.pixel_pitch_mm}mm  ·  ${selected.nits} nits  ·  ${selected.resolution_w}×${selected.resolution_h}px  ·  ${selected.refresh_rate_hz}Hz`, margin+46, y+9);
+  setFont(10,"bold",C.text); text(selected.panel_ref, margin+8, y+6);
+  setFont(7,"normal",C.muted);
+  text(`${selected.marque||""}  ·  P${selected.pixel_pitch_mm} mm  ·  ${selected.nits} nits  ·  ${selected.resolution_w}×${selected.resolution_h} px  ·  ${selected.refresh_rate_hz} Hz`, margin+8, y+12);
   y += 20;
 
+  // ── KPI CARDS ──
   const kpis = [
-    {label:"PANNEAUX",   value:`${pW} × ${pH}`,                                      sub:`${totalPanels} total`},
-    {label:"DIMENSIONS", value:`${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)}`,sub:`${surface.toFixed(2)} m²`},
-    {label:"RÉSOLUTION", value:`${(totalPixels/1000000).toFixed(2)} Mpx`,             sub:`${rW} × ${rH}`},
-    {label:"POIDS",      value:`${totalWeight.toFixed(0)} kg`,                        sub:`${selected.weight_kgs} kg/unit`},
+    {label:"PANNEAUX",   value:`${pW} × ${pH}`, sub:`${totalPanels} total`,          accent:C.blue},
+    {label:"DIMENSIONS", value:`${totalWidth.toFixed(2)}×${totalHeight.toFixed(2)}m`, sub:`${surface.toFixed(2)} m²`, accent:C.blue2},
+    {label:"RÉSOLUTION", value:`${(totalPixels/1000000).toFixed(2)} Mpx`, sub:`${rW} × ${rH}`, accent:C.blue2},
+    {label:"POIDS",      value:`${totalWeight.toFixed(0)} kg`, sub:`${selected.weight_kgs} kg/u`, accent:C.green},
   ];
   const kpiW = (W-margin*2-9)/4;
   kpis.forEach((kpi,i) => {
     const kx = margin+i*(kpiW+3);
-    setFill(C.surface2); rect(kx,y,kpiW,22,2);
-    setDraw(C.blue); doc.setLineWidth(0.4); doc.roundedRect(kx,y,kpiW,22,2,2,"S");
-    setFill(C.blue); rect(kx,y,kpiW,1.5,0);
-    setFont(6,"bold",C.muted); text(kpi.label,kx+kpiW/2,y+8,{align:"center"});
-    setFont(9,"bold",C.text); text(kpi.value,kx+kpiW/2,y+15,{align:"center"});
-    setFont(6,"normal",C.dim); text(kpi.sub,kx+kpiW/2,y+20,{align:"center"});
+    setFill(C.white); rect(kx,y,kpiW,22,2);
+    setDraw(C.surface2); doc.setLineWidth(0.3); doc.roundedRect(kx,y,kpiW,22,2,2,"S");
+    setFill(kpi.accent); rect(kx,y,kpiW,2,0);
+    setFont(6,"bold",C.dim); text(kpi.label,kx+kpiW/2,y+9,{align:"center"});
+    setFont(9,"bold",C.text); text(kpi.value,kx+kpiW/2,y+15.5,{align:"center"});
+    setFont(5.5,"normal",C.muted); text(kpi.sub,kx+kpiW/2,y+20.5,{align:"center"});
   });
   y += 28;
 
-  const vizH=50; setFill(C.surface); rect(margin,y,W-margin*2,vizH,3);
-  const maxScrW=80,maxScrH=40,aspect=totalWidth/totalHeight;
+  // ── VISUALISATION ÉCRAN ──
+  const vizH=52;
+  setFill(C.dark); rect(margin,y,W-margin*2,vizH,2);
+  // grille de fond subtile
+  doc.setDrawColor(255,255,255); doc.setLineWidth(0.1);
+  for(let gx=margin;gx<margin+(W-margin*2);gx+=8) doc.line(gx,y,gx,y+vizH);
+  for(let gy=y;gy<y+vizH;gy+=8) doc.line(margin,gy,margin+(W-margin*2),gy);
+
+  const maxScrW=76,maxScrH=42,aspect=totalWidth/totalHeight;
   let scrW=maxScrW,scrH=maxScrW/aspect;
   if(scrH>maxScrH){scrH=maxScrH;scrW=maxScrH*aspect;}
-  const scrX=margin+(W-margin*2)/2-scrW/2, scrY=y+(vizH-scrH)/2;
+  const scrX=margin+14+(W-margin*2)*0.25-scrW/2, scrY=y+(vizH-scrH)/2;
   const cellW=scrW/pW,cellH=scrH/pH;
+
+  // cellules LED avec dégradé bleu
   for(let row=0;row<pH;row++) for(let col=0;col<pW;col++) {
-    const cx=scrX+col*cellW+0.4,cy=scrY+row*cellH+0.4,t=col/Math.max(pW-1,1);
-    setFill([Math.round(124-t*80),Math.round(111+t*50),Math.round(255-t*50)]);
-    rect(cx,cy,cellW-0.8,cellH-0.8,0.5);
+    const cx=scrX+col*cellW+0.3,cy=scrY+row*cellH+0.3,t=col/Math.max(pW-1,1);
+    setFill([Math.round(37+t*(-23)),Math.round(99+t*66),Math.round(235-t*2)]);
+    rect(cx,cy,cellW-0.6,cellH-0.6,0.4);
   }
-  setDraw(C.blue); doc.setLineWidth(0.5); doc.roundedRect(scrX,scrY,scrW,scrH,1.5,1.5,"S");
-  setFont(7,"bold",C.muted); text(`${totalWidth.toFixed(2)} m · ${rW} px`,scrX+scrW/2,scrY-4,{align:"center"});
-  const bx=scrX+scrW+8,by=scrY;
-  [{label:"Diagonale",val:`${diagonal.toFixed(0)}"`},{label:"Recul min.",val:`${viewMin.toFixed(1)} m`},
-   {label:"Optimal",val:`${viewOpt.toFixed(1)} m`},{label:"Qualité",val:quality.label}].forEach((b,i)=>{
-    setFill(C.surface2); setDraw(C.blue); doc.roundedRect(bx,by+i*10,38,8,1.5,1.5,"FD");
-    setFont(6,"normal",C.muted); text(b.label,bx+3,by+i*10+4);
-    setFont(7,"bold",C.text); text(b.val,bx+38-3,by+i*10+4,{align:"right"});
+  setDraw(C.white); doc.setLineWidth(0.6); doc.roundedRect(scrX,scrY,scrW,scrH,1.5,1.5,"S");
+  setFont(6,"bold",[200,210,230]); text(`${totalWidth.toFixed(2)} m · ${rW} px`,scrX+scrW/2,scrY-3,{align:"center"});
+
+  // Info boxes à droite
+  const bx=scrX+scrW+6, by=scrY;
+  const infos=[
+    {label:"Diagonale", val:`${diagonal.toFixed(0)}"`},
+    {label:"Recul min.", val:`${viewMin.toFixed(1)} m`},
+    {label:"Optimal",   val:`${viewOpt.toFixed(1)} m`},
+    {label:"Qualité",   val:quality.label},
+  ];
+  infos.forEach((b,i)=>{
+    setFill([20,30,50]); doc.roundedRect(bx,by+i*11,40,9,1.5,1.5,"F");
+    setDraw([60,80,120]); doc.setLineWidth(0.3); doc.roundedRect(bx,by+i*11,40,9,1.5,1.5,"S");
+    setFont(5.5,"normal",[150,165,185]); text(b.label,bx+3,by+i*11+4.5);
+    setFont(7,"bold",C.white); text(b.val,bx+40-3,by+i*11+4.5,{align:"right"});
   });
   y += vizH+8;
 
+  // ── SECTIONS TABLEAU ──
   const drawSection=(title,rows,x,startY,w)=>{
-    setFill(C.blue); rect(x,startY,3,rows.length*6.5+7,0);
-    setFill(C.surface2); rect(x+3,startY,w-3,7,0);
-    setFont(7,"bold",C.text); text(title,x+6,startY+5);
-    let ty=startY+7;
+    const totalH=rows.length*6.5+8;
+    setFill(C.white); rect(x,startY,w,totalH,2);
+    setDraw(C.surface2); doc.setLineWidth(0.3); doc.roundedRect(x,startY,w,totalH,2,2,"S");
+    setFill(C.blue); rect(x,startY,w,7.5,0);
+    // coins arrondis seulement en haut
+    setFill(C.blue); doc.roundedRect(x,startY,w,7.5,2,2,"F");
+    setFont(6.5,"bold",C.white); text(title,x+6,startY+5.5);
+    let ty=startY+7.5;
     rows.forEach(([k,v],i)=>{
-      setFill(i%2===0?C.surface:C.surface2); rect(x+3,ty,w-3,6.5,0);
-      setDraw([...C.blue,0.1]); doc.setLineWidth(0.15); doc.rect(x+3,ty,w-3,6.5,"S");
-      setFont(6.5,"normal",C.muted); text(k,x+6,ty+4.5);
-      setFont(6.5,"bold",C.text); text(v,x+w-3,ty+4.5,{align:"right"});
+      setFill(i%2===0?C.white:C.surface); rect(x,ty,w,6.5,0);
+      setDraw(C.surface2); doc.setLineWidth(0.15); doc.rect(x,ty,w,6.5,"S");
+      setFont(6,"normal",C.muted); text(k,x+5,ty+4.5);
+      setFont(6,"bold",C.text); text(v,x+w-4,ty+4.5,{align:"right"});
       ty+=6.5;
     });
     return ty;
@@ -580,7 +622,7 @@ async function generatePDF(selected, result, quality) {
     ["Conso moy. totale",`${Math.round(totalPowerAvg)} W`],
     ["Puissance (moy.)",`${kW.toFixed(3)} kW`],
     ["BTU/heure",`${BTU.toFixed(0)} BTU/h`],
-    ["Coût/an",`${(costDay*365).toFixed(0)} €`],
+    ["Coût/an estimé",`${(costDay*365).toFixed(0)} €`],
   ],col1x,y,colW);
   const endRight2=drawSection("INSTALLATION",[
     ["Lignes électriques",`${powerLines} ligne(s)`],
@@ -592,38 +634,43 @@ async function generatePDF(selected, result, quality) {
   ],col2x,y,colW);
   y=Math.max(endLeft2,endRight2)+8;
 
+  // ── BARRE DE CHARGE ──
   const pct=totalPowerAvg/totalPowerMax;
-  setFill(C.surface2); rect(margin,y,W-margin*2,18,2);
-  setDraw(C.blue); doc.roundedRect(margin,y,W-margin*2,18,2,2,"S");
-  setFont(7,"bold",C.muted); text("CHARGE MOYENNE VS MAX",margin+4,y+6);
-  setFont(7,"bold",C.text); text(`${Math.round(pct*100)}%`,W-margin-4,y+6,{align:"right"});
-  setFill(C.surface); rect(margin+4,y+9,W-margin*2-8,5,2);
-  const barW2=(W-margin*2-8)*pct;
-  setFill(C.green); rect(margin+4,y+9,barW2*0.5,5,0);
-  setFill(C.blue); rect(margin+4+barW2*0.5,y+9,barW2*0.5,5,0);
+  setFill(C.white); rect(margin,y,W-margin*2,18,2);
+  setDraw(C.surface2); doc.setLineWidth(0.3); doc.roundedRect(margin,y,W-margin*2,18,2,2,"S");
+  setFont(6.5,"bold",C.muted); text("CHARGE MOYENNE VS MAX",margin+5,y+6.5);
+  setFont(8,"bold",C.blue); text(`${Math.round(pct*100)}%`,W-margin-5,y+6.5,{align:"right"});
+  // track
+  setFill(C.surface2); doc.roundedRect(margin+5,y+10,W-margin*2-10,4,2,2,"F");
+  // fill vert → bleu
+  const barFill=(W-margin*2-10)*pct;
+  setFill(C.green); rect(margin+5,y+10,barFill*0.5,4,0);
+  setFill(C.blue);  rect(margin+5+barFill*0.5,y+10,barFill*0.5,4,0);
   y+=24;
 
+  // ── CHECKLIST ──
   const checks=[
     {ok:powerLines<=4,  txt:`${powerLines} ligne(s) — ${powerLines<=4?"Standard (OK)":"Prévoir tableau dédié"}`},
-    {ok:rj45Needed<=8,  txt:`${rj45Needed} port(s) RJ45 — ${rj45Needed<=8?"Switch standard 8p (OK)":"Switch 16p requis"}`},
-    {ok:totalWeight<300,txt:`${totalWeight.toFixed(0)} kg — ${totalWeight<300?"Structure légère (OK)":"Renforcement requis"}`},
+    {ok:rj45Needed<=8,  txt:`${rj45Needed} port(s) RJ45 — ${rj45Needed<=8?"Switch standard 8p (OK)":"Switch 16p ou supérieur"}`},
+    {ok:totalWeight<300,txt:`${totalWeight.toFixed(0)} kg — ${totalWeight<300?"Structure légère (OK)":"Renforcement mural requis"}`},
     {ok:true,           txt:`Recul optimal recommandé : ${viewOpt.toFixed(1)} m minimum`},
   ];
-  setFill(C.surface2); rect(margin,y,W-margin*2,10+checks.length*8,2);
-  setDraw(C.blue); doc.roundedRect(margin,y,W-margin*2,10+checks.length*8,2,2,"S");
-  setFont(7,"bold",C.muted); text("CHECKLIST INSTALLATION",margin+4,y+6);
+  setFill(C.white); rect(margin,y,W-margin*2,10+checks.length*8,2);
+  setDraw(C.surface2); doc.setLineWidth(0.3); doc.roundedRect(margin,y,W-margin*2,10+checks.length*8,2,2,"S");
+  setFont(6.5,"bold",C.muted); text("CHECKLIST INSTALLATION",margin+5,y+6.5);
   y+=10;
   checks.forEach(c=>{
-    setFill(c.ok?C.green:C.orange); doc.circle(margin+6,y+2.5,2,"F");
-    setFont(7,c.ok?"normal":"bold",c.ok?C.muted:C.orange); text(c.txt,margin+12,y+4);
+    setFill(c.ok?C.green:C.orange); doc.circle(margin+6,y+3,2.2,"F");
+    setFont(7,c.ok?"normal":"bold",c.ok?C.text:C.orange); text(c.txt,margin+12,y+4.5);
     y+=8;
   });
 
-  setFill(C.dark); rect(0,H-12,W,12,0);
-  setFill(C.blue); rect(0,H-12,W,1.5,0);
+  // ── PIED DE PAGE ──
+  setFill(C.surface); rect(0,H-14,W,14,0);
+  setFill(C.blue); rect(0,H-14,W,1.5,0);
   setFont(6.5,"normal",C.dim);
-  text("LED Calculator · Configurateur professionnel",margin,H-5);
-  text(`Généré le ${new Date().toLocaleDateString("fr-FR")} · ${selected.panel_ref} · ${rW}×${rH}px`,W-margin,H-5,{align:"right"});
+  text("LED Calculator · Configurateur professionnel",margin,H-6);
+  text(`Généré le ${new Date().toLocaleDateString("fr-FR")} · ${selected.panel_ref} · ${rW}×${rH}px`,W-margin,H-6,{align:"right"});
 
   doc.save(`LED_Report_${selected.panel_ref}_${rW}x${rH}.pdf`);
 }
