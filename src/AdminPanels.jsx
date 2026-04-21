@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
 
 const css = `
@@ -34,6 +34,12 @@ const css = `
   .alert-error { background: rgba(255,59,48,0.1); color: #ff3b30; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
   .loading { text-align: center; padding: 40px; color: #aeaeb2; font-size: 14px; }
   .empty { text-align: center; padding: 40px; color: #aeaeb2; font-size: 14px; }
+  .csv-preview { background: #f5f5f7; border: 1px solid rgba(0,0,0,0.1); border-radius: 10px; overflow: auto; max-height: 280px; margin: 12px 0; font-size: 11px; }
+  .csv-preview table { width: 100%; border-collapse: collapse; }
+  .csv-preview th { background: rgba(0,0,0,0.06); padding: 6px 10px; text-align: left; font-size: 10px; font-weight: 700; color: #6e6e73; text-transform: uppercase; letter-spacing: 0.06em; position: sticky; top: 0; }
+  .csv-preview td { padding: 5px 10px; border-top: 1px solid rgba(0,0,0,0.06); color: #1d1d1f; }
+  .csv-preview tr:hover td { background: rgba(0,113,227,0.03); }
+  .csv-row-error td { background: rgba(255,59,48,0.06) !important; color: #ff3b30 !important; }
 `;
 
 const EMPTY_FORM = {
@@ -44,6 +50,25 @@ const EMPTY_FORM = {
   rj45_capacity: "535000", power_cable_capacity: "2200", is_active: true, notes: ""
 };
 
+const CSV_COLUMNS = [
+  "marque","type_led","brand","panel_ref","pixel_pitch_mm","resolution_w","resolution_h",
+  "panel_width_m","panel_height_m","weight_kgs","nits","power_max_w","power_avg_w",
+  "refresh_rate_hz","rj45_capacity","power_cable_capacity","notes",
+];
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return { headers: [], rows: [] };
+  const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
+  const rows = lines.slice(1).map(line => {
+    const vals = line.match(/(".*?"|[^,]+|(?<=,)(?=,)|(?<=,)$|^(?=,))/g) || [];
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (vals[i] || "").trim().replace(/^"|"$/g, ""); });
+    return obj;
+  });
+  return { headers, rows };
+}
+
 export default function AdminPanels({ onBack }) {
   const [panels, setPanels]       = useState([]);
   const [loading, setLoading]     = useState(true);
@@ -52,6 +77,10 @@ export default function AdminPanels({ onBack }) {
   const [form, setForm]           = useState(EMPTY_FORM);
   const [saving, setSaving]       = useState(false);
   const [alert, setAlert]         = useState(null);
+  const [showCSV, setShowCSV]     = useState(false);
+  const [csvRows, setCsvRows]     = useState([]);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const csvInputRef = useRef(null);
 
   useEffect(() => {
     const styleTag = document.createElement("style");
@@ -67,6 +96,50 @@ export default function AdminPanels({ onBack }) {
     const { data, error } = await supabase.from("products").select("*").order("panel_ref");
     if (!error) setPanels(data || []);
     setLoading(false);
+  };
+
+  const handleCSVFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const { rows } = parseCSV(ev.target.result);
+      const validated = rows.map(r => {
+        const numericFields = ["pixel_pitch_mm","resolution_w","resolution_h","panel_width_m","panel_height_m","weight_kgs","nits","power_max_w","power_avg_w"];
+        const hasErrors = !r.panel_ref || numericFields.some(f => r[f] === "" || isNaN(Number(r[f])));
+        return { ...r, _error: hasErrors };
+      });
+      setCsvRows(validated);
+      setShowCSV(true);
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const handleCSVImport = async () => {
+    const valid = csvRows.filter(r => !r._error);
+    if (valid.length === 0) return;
+    setCsvImporting(true);
+    const payloads = valid.map(r => ({
+      marque: r.marque, type_led: r.type_led, brand: r.brand, panel_ref: r.panel_ref,
+      pixel_pitch_mm: parseFloat(r.pixel_pitch_mm), resolution_w: parseInt(r.resolution_w),
+      resolution_h: parseInt(r.resolution_h), panel_width_m: parseFloat(r.panel_width_m),
+      panel_height_m: parseFloat(r.panel_height_m), weight_kgs: parseFloat(r.weight_kgs),
+      nits: parseInt(r.nits), power_max_w: parseInt(r.power_max_w), power_avg_w: parseFloat(r.power_avg_w),
+      refresh_rate_hz: r.refresh_rate_hz ? parseInt(r.refresh_rate_hz) : 3840,
+      rj45_capacity: r.rj45_capacity ? parseInt(r.rj45_capacity) : 535000,
+      power_cable_capacity: r.power_cable_capacity ? parseInt(r.power_cable_capacity) : 2200,
+      notes: r.notes || "", is_active: true,
+    }));
+    const { error } = await supabase.from("products").upsert(payloads, { onConflict: "panel_ref" });
+    if (error) {
+      setAlert({ type: "error", msg: `Import échoué: ${error.message}` });
+    } else {
+      setAlert({ type: "success", msg: `${payloads.length} panneau(x) importé(s) !` });
+      setCsvRows([]); setShowCSV(false);
+      await fetchPanels();
+    }
+    setCsvImporting(false);
   };
 
   const openAdd = () => { setEditing(null); setForm(EMPTY_FORM); setShowModal(true); };
@@ -144,8 +217,15 @@ if (editing) {
       <div className="admin-content">
         <div className="admin-header-row">
           <div className="admin-title">Gestion des panneaux LED</div>
-          <button className="btn-primary" onClick={openAdd}>+ Ajouter un panneau</button>
+          <div style={{ display:"flex", gap:8 }}>
+            <input ref={csvInputRef} type="file" accept=".csv,text/csv" style={{ display:"none" }} onChange={handleCSVFile} />
+            <button className="btn-secondary" onClick={() => csvInputRef.current?.click()}>⬆ Import CSV</button>
+            <button className="btn-primary" onClick={openAdd}>+ Ajouter un panneau</button>
+          </div>
         </div>
+        {alert && !showModal && (
+          <div className={alert.type === "success" ? "alert-success" : "alert-error"} style={{ marginBottom:16 }}>{alert.msg}</div>
+        )}
 
         {loading ? (
           <div className="loading">Chargement…</div>
@@ -203,6 +283,49 @@ if (editing) {
           </div>
         )}
       </div>
+
+      {showCSV && (
+        <div className="modal-bg" onClick={() => setShowCSV(false)}>
+          <div className="modal" style={{ width:700 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Import CSV — Aperçu</div>
+            <div style={{ fontSize:12, color:"#6e6e73", marginBottom:8 }}>
+              {csvRows.filter(r => !r._error).length} valide(s) · {csvRows.filter(r => r._error).length} erreur(s). Les lignes en rouge seront ignorées.
+              Les entrées existantes (même <code>panel_ref</code>) seront mises à jour.
+            </div>
+            <div style={{ fontSize:11, color:"#6e6e73", marginBottom:10 }}>
+              Format CSV attendu — colonnes : <code>{CSV_COLUMNS.join(", ")}</code>
+            </div>
+            <div className="csv-preview">
+              <table>
+                <thead><tr>
+                  {["panel_ref","marque","type_led","pixel_pitch_mm","nits","power_max_w","weight_kgs"].map(h => <th key={h}>{h}</th>)}
+                  <th>Statut</th>
+                </tr></thead>
+                <tbody>
+                  {csvRows.map((r, i) => (
+                    <tr key={i} className={r._error ? "csv-row-error" : ""}>
+                      <td>{r.panel_ref || "—"}</td>
+                      <td>{r.marque || "—"}</td>
+                      <td>{r.type_led || "—"}</td>
+                      <td>{r.pixel_pitch_mm}</td>
+                      <td>{r.nits}</td>
+                      <td>{r.power_max_w}</td>
+                      <td>{r.weight_kgs}</td>
+                      <td>{r._error ? "⚠ Erreur" : "✓ OK"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setShowCSV(false)}>Annuler</button>
+              <button className="btn-primary" onClick={handleCSVImport} disabled={csvImporting || csvRows.filter(r => !r._error).length === 0}>
+                {csvImporting ? "Import en cours…" : `Importer ${csvRows.filter(r => !r._error).length} panneau(x)`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="modal-bg" onClick={closeModal}>

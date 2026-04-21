@@ -367,6 +367,48 @@ const css = `
     .topbar-kpis { display: none; }
     .stat-grid-3 { grid-template-columns: 1fr 1fr; }
   }
+
+  /* ── TAB BAR SCROLL ── */
+  .tab-bar { overflow-x: auto; scrollbar-width: none; }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-btn { white-space: nowrap; flex-shrink: 0; min-width: 0; }
+
+  /* ── COMPARE ── */
+  .compare-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .compare-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .compare-card-header { background: var(--surface2); padding: 9px 14px; border-bottom: 1px solid var(--border); }
+  .compare-card-title { font-size: 11px; font-weight: 700; color: var(--text); font-family: var(--font-mono); }
+  .compare-card-sub { font-size: 9px; color: var(--text-dim); margin-top: 2px; }
+  .compare-win td { background: oklch(60% 0.170 155 / 0.08) !important; color: var(--green) !important; }
+  .compare-separator td { border-top: 2px solid var(--border); font-size: 9px !important; color: var(--text-dim) !important; text-transform: uppercase; letter-spacing: 0.1em; }
+
+  /* ── PROJECT ── */
+  .proj-screen-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .proj-screen-info { flex: 1; min-width: 0; }
+  .proj-screen-name { font-size: 11px; font-weight: 600; color: var(--text); font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .proj-screen-sub { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+  .proj-total-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 10px; }
+  .proj-total-title { font-size: 9px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 10px; font-family: var(--font-mono); }
+  .proj-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 13px; }
+  .proj-add-btn { width: 100%; padding: 10px; border: 1.5px dashed var(--border); background: transparent; border-radius: 8px; cursor: pointer; font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 14px; transition: all 0.15s; }
+  .proj-add-btn:hover { border-color: var(--accent); color: var(--accent); background: oklch(44% 0.188 245 / 0.04); }
+
+  /* ── HISTORY ── */
+  .hist-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .hist-info { flex: 1; min-width: 0; }
+  .hist-name { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hist-date { font-size: 10px; color: var(--text-dim); margin-top: 2px; font-family: var(--font-mono); }
+  .hist-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .btn-xs { padding: 4px 10px; border-radius: 5px; font-size: 10px; font-weight: 600; cursor: pointer; font-family: var(--font-ui); border: 1px solid var(--border); background: transparent; color: var(--text-muted); transition: all 0.12s; }
+  .btn-xs:hover { border-color: var(--border-hover); color: var(--text); }
+  .btn-xs.danger { border-color: transparent; background: oklch(56% 0.195 25 / 0.1); color: var(--red); }
+  .btn-xs.primary { border-color: oklch(44% 0.188 245 / 0.4); background: oklch(44% 0.188 245 / 0.08); color: var(--accent); }
+  .save-cfg-btn { width: 100%; padding: 9px; border: 1.5px dashed var(--border); background: transparent; border-radius: 7px; cursor: pointer; font-size: 11px; font-weight: 600; color: var(--text-muted); font-family: var(--font-ui); transition: all 0.15s; margin-bottom: 14px; }
+  .save-cfg-btn:hover { border-color: var(--accent); color: var(--accent); background: oklch(44% 0.188 245 / 0.04); }
+  .hist-empty { text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 13px; }
+
+  /* ── SECTION LABEL ── */
+  .section-label { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.14em; font-family: var(--font-mono); margin-bottom: 8px; margin-top: 4px; }
 `;
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
@@ -674,6 +716,17 @@ export default function LEDCalculator({ onAdmin }) {
   const [activeTab, setActiveTab]     = useState("product");
   const [pdfLoading, setPdfLoading]   = useState(false);
   const [bgPreset, setBgPreset]       = useState("off");
+  const [customBg, setCustomBg]       = useState(null);
+  const [showSilhouette, setShowSilhouette] = useState(false);
+  const [brandFilter2, setBrandFilter2] = useState("all");
+  const [selIdx2, setSelIdx2]         = useState(0);
+  const [projectScreens, setProjectScreens] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("led-project") || "[]"); } catch { return []; }
+  });
+  const [savedConfigs, setSavedConfigs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("led-configs") || "[]"); } catch { return []; }
+  });
+  const fileInputRef = useRef(null);
   const vizRef = useRef(null);
   const [vizSize, setVizSize]         = useState({ w: 600, h: 260 });
 
@@ -757,6 +810,76 @@ export default function LEDCalculator({ onAdmin }) {
   const costDay     = kW * 0.22 * 10;
   const pixDensity  = surface ? Math.round(totalPixels / surface) : 0;
 
+  // Comparateur
+  const filtered2 = products.filter(p => brandFilter2 === "all" || p.marque === brandFilter2);
+  const selected2  = filtered2[Math.min(selIdx2, filtered2.length - 1)] || filtered2[0] || products[0];
+  const result2    = computeLED(selected2, {
+    width: Number(width)||0, height: Number(height)||0,
+    panelsW: Number(panelsW)||1, panelsH: Number(panelsH)||1,
+    resW: Number(resW)||1920, resH: Number(resH)||1080,
+  }, mode);
+
+  // Historique
+  const saveConfig = () => {
+    const cfg = {
+      id: Date.now(),
+      name: `${selected.panel_ref} · ${totalWidth.toFixed(2)}×${totalHeight.toFixed(2)} m`,
+      date: new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }),
+      panelRef: selected.panel_ref, marque: selected.marque,
+      mode, width, height, panelsW, panelsH, resW, resH,
+      selIdx, brandFilter, sizeFilter,
+      summary: `${totalPanels} cabinets · ${rW}×${rH} px · ${Math.round(totalPowerAvg)} W`,
+    };
+    const next = [cfg, ...savedConfigs].slice(0, 30);
+    setSavedConfigs(next);
+    localStorage.setItem("led-configs", JSON.stringify(next));
+  };
+  const deleteConfig = (id) => {
+    const next = savedConfigs.filter(c => c.id !== id);
+    setSavedConfigs(next);
+    localStorage.setItem("led-configs", JSON.stringify(next));
+  };
+  const loadConfig = (cfg) => {
+    setBrandFilter(cfg.brandFilter || "all");
+    setSizeFilter(cfg.sizeFilter || "60x34");
+    setSelIdx(cfg.selIdx || 0);
+    setMode(cfg.mode || "dimensions");
+    setWidth(cfg.width); setHeight(cfg.height);
+    setPanelsW(cfg.panelsW); setPanelsH(cfg.panelsH);
+    setResW(cfg.resW); setResH(cfg.resH);
+    setActiveTab("screen");
+  };
+
+  // Projet
+  const addToProject = () => {
+    const screen = {
+      id: Date.now(),
+      panelRef: selected.panel_ref, marque: selected.marque,
+      panelsW: pW, panelsH: pH, totalPanels,
+      totalWidth: totalWidth.toFixed(2), totalHeight: totalHeight.toFixed(2),
+      resW: rW, resH: rH, totalPowerMax: Math.round(totalPowerMax),
+      totalPowerAvg: Math.round(totalPowerAvg), totalWeight: totalWeight.toFixed(1),
+      label: `${selected.panel_ref} · ${totalWidth.toFixed(2)}×${totalHeight.toFixed(2)} m`,
+    };
+    const next = [...projectScreens, screen];
+    setProjectScreens(next);
+    localStorage.setItem("led-project", JSON.stringify(next));
+  };
+  const removeFromProject = (id) => {
+    const next = projectScreens.filter(s => s.id !== id);
+    setProjectScreens(next);
+    localStorage.setItem("led-project", JSON.stringify(next));
+  };
+
+  // Image upload
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => { setCustomBg(ev.target.result); setBgPreset("custom"); };
+    reader.readAsDataURL(file);
+  };
+
   const PAD  = 80;
   const safeW = totalWidth || 1, safeH = totalHeight || 1;
   const scale = Math.min((vizSize.w - PAD * 2) / safeW, (vizSize.h - PAD) / safeH);
@@ -769,10 +892,13 @@ export default function LEDCalculator({ onAdmin }) {
     { id: "resolution", label: "Résolution", icon: "🎯" },
   ];
   const TABS = [
-    { id: "product",  label: "Produit",      icon: "📦" },
-    { id: "screen",   label: "Écran",        icon: "🖥️" },
-    { id: "power",    label: "Électrique",   icon: "⚡" },
-    { id: "install",  label: "Installation", icon: "🔧" },
+    { id: "product",  label: "Produit",   icon: "📦" },
+    { id: "screen",   label: "Écran",     icon: "🖥️" },
+    { id: "power",    label: "Élec.",     icon: "⚡" },
+    { id: "install",  label: "Install.",  icon: "🔧" },
+    { id: "compare",  label: "Comparer",  icon: "⚖️" },
+    { id: "project",  label: "Projet",    icon: "📋" },
+    { id: "history",  label: "Historique",icon: "🕐" },
   ];
 
   const BG_PRESETS = [
@@ -781,8 +907,11 @@ export default function LEDCalculator({ onAdmin }) {
     { id: "scene",     label: "Scène",     bg: "radial-gradient(ellipse 120% 80% at 50% 110%,#6b21a8 0%,#1e1b4b 40%,#080810 100%)" },
     { id: "corporate", label: "Corporate", bg: "linear-gradient(160deg,#0f2a4a 0%,#1e4d8c 45%,#0f2a4a 100%)" },
     { id: "sport",     label: "Sport",     bg: "radial-gradient(ellipse 120% 90% at 50% 110%,#14532d 0%,#052e16 55%,#030a05 100%)" },
+    { id: "custom",    label: "Image",     bg: customBg || "oklch(18% 0.028 245)" },
   ];
-  const screenBg = BG_PRESETS.find(p => p.id === bgPreset)?.bg ?? "oklch(18% 0.028 245)";
+  const screenBg = bgPreset === "custom" && customBg
+    ? `url(${customBg})`
+    : (BG_PRESETS.find(p => p.id === bgPreset)?.bg ?? "oklch(18% 0.028 245)");
 
   const handlePDF = async () => {
     if (!window.jspdf) { alert("jsPDF charge encore, réessayez."); return; }
@@ -933,12 +1062,16 @@ export default function LEDCalculator({ onAdmin }) {
         <div className="right-panel">
           <div className="viz-area" ref={vizRef}>
             <div className="viz-grid-bg" />
+            <input ref={fileInputRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleImageUpload} />
             <div style={{
               position:"absolute", top:8, right:10, zIndex:10,
-              display:"flex", gap:3,
+              display:"flex", gap:3, flexWrap:"wrap", justifyContent:"flex-end",
             }}>
               {BG_PRESETS.map(p => (
-                <button key={p.id} onClick={() => setBgPreset(p.id)} style={{
+                <button key={p.id} onClick={() => {
+                  if (p.id === "custom") { fileInputRef.current?.click(); }
+                  else setBgPreset(p.id);
+                }} style={{
                   padding:"3px 8px", fontSize:"9px", fontFamily:"var(--font-mono)",
                   fontWeight: bgPreset === p.id ? 700 : 400,
                   letterSpacing:"0.04em", textTransform:"uppercase",
@@ -947,8 +1080,18 @@ export default function LEDCalculator({ onAdmin }) {
                   background: bgPreset === p.id ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.3)",
                   color: bgPreset === p.id ? "#fff" : "rgba(255,255,255,0.45)",
                   backdropFilter:"blur(6px)", transition:"all 0.15s",
-                }}>{p.label}</button>
+                }}>{p.id === "custom" && customBg ? "✓ Image" : p.label}</button>
               ))}
+              <button onClick={() => setShowSilhouette(s => !s)} title="Silhouette humaine (1.75 m)" style={{
+                padding:"3px 8px", fontSize:"9px", fontFamily:"var(--font-mono)",
+                fontWeight: showSilhouette ? 700 : 400,
+                letterSpacing:"0.04em",
+                border: showSilhouette ? "1px solid rgba(255,255,255,0.5)" : "1px solid rgba(255,255,255,0.12)",
+                borderRadius:"3px", cursor:"pointer",
+                background: showSilhouette ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.3)",
+                color: showSilhouette ? "#fff" : "rgba(255,255,255,0.45)",
+                backdropFilter:"blur(6px)", transition:"all 0.15s",
+              }}>👤 Échelle</button>
             </div>
             <div className="screen-container">
               <div className="dim-label">
@@ -992,7 +1135,28 @@ export default function LEDCalculator({ onAdmin }) {
                   </div>
                   <div className="screen-bottom-bar" />
                 </div>
-                <div style={{ width: 64 }} />
+                <div style={{ width: 64, height: scrH, display:"flex", flexDirection:"column", justifyContent:"flex-end", alignItems:"center" }}>
+                  {showSilhouette && (() => {
+                    const pH2 = Math.min(Math.max(20, 1.75 * scale), vizSize.h - 20);
+                    const pW2 = pH2 * 0.38;
+                    return (
+                      <div style={{ display:"flex", flexDirection:"column", alignItems:"center" }}>
+                        <svg viewBox="0 0 35 100" width={pW2} height={pH2} style={{ display:"block", overflow:"visible" }}>
+                          <ellipse cx="17.5" cy="8" rx="7" ry="7" fill="rgba(255,255,255,0.45)" />
+                          <rect x="10" y="17" width="15" height="28" rx="3" fill="rgba(255,255,255,0.38)" />
+                          <rect x="3"  y="18" width="7"  height="20" rx="3" fill="rgba(255,255,255,0.28)" />
+                          <rect x="25" y="18" width="7"  height="20" rx="3" fill="rgba(255,255,255,0.28)" />
+                          <rect x="11" y="44" width="6"  height="30" rx="3" fill="rgba(255,255,255,0.38)" />
+                          <rect x="18" y="44" width="6"  height="30" rx="3" fill="rgba(255,255,255,0.38)" />
+                          <rect x="9"  y="72" width="8"  height="10" rx="2" fill="rgba(255,255,255,0.28)" />
+                          <rect x="18" y="72" width="8"  height="10" rx="2" fill="rgba(255,255,255,0.28)" />
+                          <line x1="0" y1="83" x2="35" y2="83" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" strokeDasharray="2 2" />
+                        </svg>
+                        <div style={{ color:"rgba(255,255,255,0.5)", fontSize:8, fontFamily:"var(--font-mono)", marginTop:3, textAlign:"center" }}>1.75 m</div>
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
               <div className="viz-badges">
                 <span className="viz-badge" style={{ color: "#fbbf24", background: "rgba(251,191,36,0.15)", borderColor: "rgba(251,191,36,0.35)" }}>👁 Min: {viewMin.toFixed(1)} m</span>
@@ -1139,6 +1303,139 @@ export default function LEDCalculator({ onAdmin }) {
                 </div>
               </div>
             )}
+
+            {/* ── COMPARER ── */}
+            {activeTab === "compare" && (
+              <div>
+                <div style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:8, padding:"12px 14px", marginBottom:14 }}>
+                  <div className="section-label">Panneau B à comparer (mêmes dimensions)</div>
+                  <div className="product-select-wrap" style={{ marginBottom:6 }}>
+                    <select className="product-select" value={brandFilter2} onChange={e => { setBrandFilter2(e.target.value); setSelIdx2(0); }}>
+                      <option value="all">Toutes les marques</option>
+                      {brands.filter(b => b !== "all").map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                    {chevron}
+                  </div>
+                  <div className="product-select-wrap">
+                    <select className="product-select" value={selIdx2} onChange={e => setSelIdx2(Number(e.target.value))}>
+                      {filtered2.map((p, i) => (
+                        <option key={i} value={i}>{p.panel_ref} — P{p.pixel_pitch_mm} · {Math.round(p.panel_width_m*100)}×{Math.round(p.panel_height_m*100)}cm · {p.nits}nits</option>
+                      ))}
+                    </select>
+                    {chevron}
+                  </div>
+                </div>
+
+                <div className="compare-cols">
+                  {[
+                    { sel: selected,  res: result,  tag: "A — Sélection" },
+                    { sel: selected2, res: result2, tag: "B — Comparé" },
+                  ].map(({ sel, res, tag }, idx) => {
+                    const other = idx === 0 ? result2 : result;
+                    const otherSel = idx === 0 ? selected2 : selected;
+                    const wins = (a, b, lowerBetter) => lowerBetter ? a < b : a > b;
+                    return (
+                      <div key={tag} className="compare-card">
+                        <div className="compare-card-header">
+                          <div className="compare-card-title">{tag}</div>
+                          <div className="compare-card-sub">{sel.panel_ref} · {sel.marque}</div>
+                        </div>
+                        <table className="data-table" style={{ fontSize:11 }}>
+                          <tbody>
+                            {[
+                              { k:"Pitch",     v:`${sel.pixel_pitch_mm} mm`,      win: wins(sel.pixel_pitch_mm, otherSel.pixel_pitch_mm, true) },
+                              { k:"Luminosité",v:`${sel.nits} nits`,              win: wins(sel.nits, otherSel.nits, false) },
+                              { k:"Refresh",   v:`${sel.refresh_rate_hz} Hz`,     win: wins(sel.refresh_rate_hz, otherSel.refresh_rate_hz, false) },
+                              { k:"Type LED",  v:sel.type_led || "—",             win: false },
+                              { k:"Poids/u",   v:`${sel.weight_kgs} kg`,          win: wins(sel.weight_kgs, otherSel.weight_kgs, true) },
+                              { k:"Conso max/u",v:`${sel.power_max_w} W`,         win: wins(sel.power_max_w, otherSel.power_max_w, true) },
+                              { k:"───",       v:"─ Résultat config ─", sep:true },
+                              { k:"Panneaux",  v:`${res.panelsW}×${res.panelsH} = ${res.totalPanels}`, win: wins(res.totalPanels, other.totalPanels, true) },
+                              { k:"Résolution",v:`${res.resW}×${res.resH}`,       win: wins(res.totalPixels, other.totalPixels, false) },
+                              { k:"Conso moy.",v:`${Math.round(res.totalPowerAvg)} W`, win: wins(res.totalPowerAvg, other.totalPowerAvg, true) },
+                              { k:"Poids total",v:`${(res.totalPanels * sel.weight_kgs).toFixed(0)} kg`, win: wins(res.totalPanels * sel.weight_kgs, other.totalPanels * otherSel.weight_kgs, true) },
+                            ].map((row) => (
+                              <tr key={row.k} className={row.sep ? "compare-separator" : row.win ? "compare-win" : ""}>
+                                <td>{row.k}</td><td>{row.v}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── PROJET ── */}
+            {activeTab === "project" && (
+              <div>
+                <button className="proj-add-btn" onClick={addToProject}>
+                  + Ajouter l'écran actuel au projet ({selected.panel_ref} · {totalWidth.toFixed(2)}×{totalHeight.toFixed(2)} m)
+                </button>
+
+                {projectScreens.length === 0 ? (
+                  <div className="proj-empty">Aucun écran dans le projet.<br />Configurez un écran puis cliquez sur "Ajouter".</div>
+                ) : (<>
+                  {projectScreens.map((s, i) => (
+                    <div key={s.id} className="proj-screen-item">
+                      <div style={{ width:28, height:28, background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:5, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"var(--text-dim)", fontFamily:"var(--font-mono)", flexShrink:0 }}>{i+1}</div>
+                      <div className="proj-screen-info">
+                        <div className="proj-screen-name">{s.label}</div>
+                        <div className="proj-screen-sub">{s.panelsW}×{s.panelsH} cabinets · {s.resW}×{s.resH}px · {s.totalPowerAvg} W moy.</div>
+                      </div>
+                      <button className="btn-xs danger" onClick={() => removeFromProject(s.id)}>✕</button>
+                    </div>
+                  ))}
+
+                  <div className="proj-total-box">
+                    <div className="proj-total-title">Totaux du projet</div>
+                    <table className="data-table">
+                      <tbody>
+                        {[
+                          ["Écrans",           `${projectScreens.length}`],
+                          ["Cabinets total",   `${projectScreens.reduce((s,x) => s + x.totalPanels, 0)}`],
+                          ["Conso max totale", `${projectScreens.reduce((s,x) => s + x.totalPowerMax, 0)} W`],
+                          ["Conso moy. totale",`${projectScreens.reduce((s,x) => s + x.totalPowerAvg, 0)} W`],
+                          ["Poids total",      `${projectScreens.reduce((s,x) => s + parseFloat(x.totalWeight), 0).toFixed(1)} kg`],
+                        ].map(([k, v]) => <tr key={k}><td>{k}</td><td>{v}</td></tr>)}
+                      </tbody>
+                    </table>
+                    <button className="btn-xs danger" style={{ marginTop:12, width:"100%", textAlign:"center" }} onClick={() => {
+                      setProjectScreens([]); localStorage.removeItem("led-project");
+                    }}>Vider le projet</button>
+                  </div>
+                </>)}
+              </div>
+            )}
+
+            {/* ── HISTORIQUE ── */}
+            {activeTab === "history" && (
+              <div>
+                <button className="save-cfg-btn" onClick={saveConfig}>
+                  ＋ Sauvegarder la configuration actuelle ({selected.panel_ref} · {totalWidth.toFixed(2)}×{totalHeight.toFixed(2)} m)
+                </button>
+
+                {savedConfigs.length === 0 ? (
+                  <div className="hist-empty">Aucune configuration sauvegardée.<br />Cliquez sur "Sauvegarder" pour en créer une.</div>
+                ) : (
+                  savedConfigs.map(cfg => (
+                    <div key={cfg.id} className="hist-item">
+                      <div className="hist-info">
+                        <div className="hist-name">{cfg.name}</div>
+                        <div className="hist-date">{cfg.date} · {cfg.summary}</div>
+                      </div>
+                      <div className="hist-actions">
+                        <button className="btn-xs primary" onClick={() => loadConfig(cfg)}>Charger</button>
+                        <button className="btn-xs danger"  onClick={() => deleteConfig(cfg.id)}>✕</button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
           </div>
         </div>
       </div>
