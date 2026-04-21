@@ -599,7 +599,7 @@ async function generatePDF(selected, result, quality) {
     ["Résolution totale",`${rW} × ${rH} px`],
     ["Mégapixels",`${(totalPixels/1000000).toFixed(3)} Mpx`],
     ["Ratio d'image",getRatio(rW,rH)],
-    ["Densité pixels",`${pixDensity.toLocaleString()} px/m²`],
+    ["Densité pixels",`${String(pixDensity).replace(/\B(?=(\d{3})+(?!\d))/g," ")} px/m2`],
     ["Surface active",`${surface.toFixed(3)} m²`],
     ["Poids total",`${totalWeight.toFixed(1)} kg`],
     ["Qualité image",quality.label],
