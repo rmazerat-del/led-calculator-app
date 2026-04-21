@@ -81,6 +81,21 @@ export default function AdminPanels({ onBack }) {
   const handleSave = async () => {
     setSaving(true);
     setAlert(null);
+
+    const requiredNumeric = ["pixel_pitch_mm", "resolution_w", "resolution_h", "panel_width_m", "panel_height_m", "weight_kgs", "nits", "power_max_w", "power_avg_w"];
+    for (const field of requiredNumeric) {
+      if (form[field] === "" || form[field] === null || form[field] === undefined || isNaN(Number(form[field]))) {
+        setAlert({ type: "error", msg: `Le champ "${field}" est requis et doit être un nombre valide.` });
+        setSaving(false);
+        return;
+      }
+    }
+    if (!form.panel_ref) {
+      setAlert({ type: "error", msg: "La référence panneau est requise." });
+      setSaving(false);
+      return;
+    }
+
     const payload = {
       marque: form.marque, type_led: form.type_led, brand: form.brand,
       panel_ref: form.panel_ref,
