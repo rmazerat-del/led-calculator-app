@@ -682,6 +682,7 @@ export default function LEDCalculator({ onAdmin }) {
   const [resH, setResH]               = useState(1080);
   const [activeTab, setActiveTab]     = useState("product");
   const [pdfLoading, setPdfLoading]   = useState(false);
+  const [bgPreset, setBgPreset]       = useState("off");
   const vizRef = useRef(null);
   const [vizSize, setVizSize]         = useState({ w: 600, h: 260 });
 
@@ -782,6 +783,15 @@ export default function LEDCalculator({ onAdmin }) {
     { id: "power",    label: "Électrique",   icon: "⚡" },
     { id: "install",  label: "Installation", icon: "🔧" },
   ];
+
+  const BG_PRESETS = [
+    { id: "off",       label: "Off",       bg: "oklch(18% 0.028 245)" },
+    { id: "mire",      label: "Mire",      bg: "linear-gradient(90deg,#c8c8c8 0% 14.28%,#c8c800 14.28% 28.57%,#00c8c8 28.57% 42.86%,#00c800 42.86% 57.14%,#c800c8 57.14% 71.43%,#c80000 71.43% 85.71%,#0000c8 85.71% 100%)" },
+    { id: "scene",     label: "Scène",     bg: "radial-gradient(ellipse 120% 80% at 50% 110%,#6b21a8 0%,#1e1b4b 40%,#080810 100%)" },
+    { id: "corporate", label: "Corporate", bg: "linear-gradient(160deg,#0f2a4a 0%,#1e4d8c 45%,#0f2a4a 100%)" },
+    { id: "sport",     label: "Sport",     bg: "radial-gradient(ellipse 120% 90% at 50% 110%,#14532d 0%,#052e16 55%,#030a05 100%)" },
+  ];
+  const screenBg = BG_PRESETS.find(p => p.id === bgPreset)?.bg ?? "oklch(18% 0.028 245)";
 
   const handlePDF = async () => {
     if (!window.jspdf) { alert("jsPDF charge encore, réessayez."); return; }
@@ -932,6 +942,23 @@ export default function LEDCalculator({ onAdmin }) {
         <div className="right-panel">
           <div className="viz-area" ref={vizRef}>
             <div className="viz-grid-bg" />
+            <div style={{
+              position:"absolute", top:8, right:10, zIndex:10,
+              display:"flex", gap:3,
+            }}>
+              {BG_PRESETS.map(p => (
+                <button key={p.id} onClick={() => setBgPreset(p.id)} style={{
+                  padding:"3px 8px", fontSize:"9px", fontFamily:"var(--font-mono)",
+                  fontWeight: bgPreset === p.id ? 700 : 400,
+                  letterSpacing:"0.04em", textTransform:"uppercase",
+                  border: bgPreset === p.id ? "1px solid rgba(255,255,255,0.5)" : "1px solid rgba(255,255,255,0.12)",
+                  borderRadius:"3px", cursor:"pointer",
+                  background: bgPreset === p.id ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.3)",
+                  color: bgPreset === p.id ? "#fff" : "rgba(255,255,255,0.45)",
+                  backdropFilter:"blur(6px)", transition:"all 0.15s",
+                }}>{p.label}</button>
+              ))}
+            </div>
             <div className="screen-container">
               <div className="dim-label">
                 <div className="dim-line" style={{ width: Math.max(0, scrW/2 - 28) }} />
@@ -959,9 +986,14 @@ export default function LEDCalculator({ onAdmin }) {
                   </span>
                   <div className="height-line" />
                 </div>
-                <div className="led-screen" style={{ width: scrW, height: scrH, background: "#0f172a" }}>
+                <div className="led-screen" style={{ width: scrW, height: scrH, background: screenBg, backgroundSize: "cover", backgroundPosition: "center" }}>
                   <div className="led-grid" style={{ gridTemplateColumns: `repeat(${pW},1fr)`, gridTemplateRows: `repeat(${pH},1fr)` }}>
-                    {Array.from({ length: pW * pH }).map((_, i) => <div key={i} className="led-panel-cell" />)}
+                    {Array.from({ length: pW * pH }).map((_, i) => (
+                      <div key={i} className="led-panel-cell" style={{
+                        background: bgPreset === "off" ? "transparent" : "rgba(0,0,0,0.08)",
+                        border: bgPreset === "off" ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.35)",
+                      }} />
+                    ))}
                   </div>
                   <div className="screen-overlay-tl">
                     <div className="screen-overlay-title">{pW} × {pH} cabinets</div>
