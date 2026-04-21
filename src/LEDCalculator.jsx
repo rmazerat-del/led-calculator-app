@@ -3,6 +3,67 @@
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 
+// ── CONTRÔLEURS NOVASTAR ──────────────────────────────────────────────────────
+// pixels = capacité totale de chargement pixels ; ports = sorties Ethernet vers panneaux
+const NOVASTAR_CONTROLLERS = [
+  {
+    model: "MCTRL300",
+    category: "Carte d'envoi",
+    ports: 1,
+    maxPixels: 650_000,
+    maxResW: 1920, maxResH: 1080,
+    notes: "Embarquée dans PC/media server. Usage petite installation.",
+  },
+  {
+    model: "MCTRL660 Pro",
+    category: "Carte d'envoi",
+    ports: 2,
+    maxPixels: 2_300_000,
+    maxResW: 3840, maxResH: 1080,
+    notes: "2 sorties Ethernet indépendantes. Populaire en touring.",
+  },
+  {
+    model: "VX600",
+    category: "Boîtier tout-en-un",
+    ports: 6,
+    maxPixels: 3_000_000,
+    maxResW: 3840, maxResH: 1080,
+    notes: "6 sorties, entrées HDMI/SDI/DP. Standard de facto salle moyenne.",
+  },
+  {
+    model: "VX1000",
+    category: "Boîtier tout-en-un",
+    ports: 10,
+    maxPixels: 6_500_000,
+    maxResW: 7680, maxResH: 1080,
+    notes: "10 sorties, haute capacité. Adapté grandes scènes.",
+  },
+  {
+    model: "VX1S",
+    category: "Boîtier tout-en-un",
+    ports: 8,
+    maxPixels: 2_300_000,
+    maxResW: 3840, maxResH: 1080,
+    notes: "8 sorties compactes. Bon compromis polyvalence/format.",
+  },
+  {
+    model: "VX4S",
+    category: "Boîtier tout-en-un",
+    ports: 12,
+    maxPixels: 6_500_000,
+    maxResW: 3840, maxResH: 2160,
+    notes: "4K natif, 12 sorties. Haut de gamme pour productions broadcast.",
+  },
+  {
+    model: "H9",
+    category: "Processeur vidéo",
+    ports: 18,
+    maxPixels: 13_000_000,
+    maxResW: 7680, maxResH: 4320,
+    notes: "18 sorties, multi-source, format scaler intégré. Flagship.",
+  },
+];
+
 // ── BASE QSTECH EMBARQUÉE — jamais perdue ─────────────────────────────────────
 const STATIC_PRODUCTS = [
   {
@@ -409,6 +470,32 @@ const css = `
 
   /* ── SECTION LABEL ── */
   .section-label { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.14em; font-family: var(--font-mono); margin-bottom: 8px; margin-top: 4px; }
+
+  /* ── NOVASTAR CONTROLLERS ── */
+  .ctrl-grid { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .ctrl-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 13px; display: grid; grid-template-columns: auto 1fr auto; gap: 10px;
+    align-items: center; transition: border-color 0.15s;
+  }
+  .ctrl-card.ok     { border-color: oklch(60% 0.170 155 / 0.5); background: oklch(60% 0.170 155 / 0.04); }
+  .ctrl-card.ok.best { border-color: var(--green); box-shadow: 0 0 0 1px oklch(60% 0.170 155 / 0.2); }
+  .ctrl-card.warn   { border-color: oklch(70% 0.155 55 / 0.4); background: oklch(70% 0.155 55 / 0.03); }
+  .ctrl-card.fail   { border-color: var(--border); background: var(--surface2); opacity: 0.55; }
+  .ctrl-status-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .ctrl-body        { min-width: 0; }
+  .ctrl-model       { font-size: 12px; font-weight: 700; color: var(--text); font-family: var(--font-mono); }
+  .ctrl-category    { font-size: 9.5px; color: var(--text-dim); margin-top: 1px; }
+  .ctrl-notes       { font-size: 10px; color: var(--text-dim); margin-top: 3px; line-height: 1.4; }
+  .ctrl-specs       { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+  .ctrl-spec-row    { display: flex; gap: 5px; align-items: center; }
+  .ctrl-spec-val    { font-size: 11px; font-weight: 600; font-family: var(--font-mono); color: var(--text); }
+  .ctrl-spec-label  { font-size: 9px; color: var(--text-dim); font-family: var(--font-mono); }
+  .ctrl-badge       { font-size: 8.5px; font-weight: 700; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .ctrl-badge.best  { background: oklch(60% 0.170 155 / 0.15); color: var(--green); }
+  .ctrl-badge.ok    { background: oklch(60% 0.170 155 / 0.08); color: var(--green); opacity: 0.7; }
+  .ctrl-badge.warn  { background: oklch(70% 0.155 55 / 0.12); color: var(--orange); }
+  .ctrl-badge.fail  { background: var(--surface3); color: var(--text-dim); }
 `;
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
@@ -1295,6 +1382,52 @@ export default function LEDCalculator({ onAdmin }) {
                     </tbody>
                   </table>
                 </div>
+                {/* ── CONTRÔLEURS NOVASTAR ── */}
+                <div style={{ marginBottom: 12 }}>
+                  <div className="section-label" style={{ marginBottom: 10 }}>Contrôleur Novastar — compatibilité</div>
+                  <div className="ctrl-grid">
+                    {(() => {
+                      const sorted = [...NOVASTAR_CONTROLLERS].sort((a, b) => a.maxPixels - b.maxPixels);
+                      const bestIdx = sorted.findIndex(c => c.maxPixels >= totalPixels && c.ports >= rj45Needed);
+                      return sorted.map((c, i) => {
+                        const pixOk  = c.maxPixels >= totalPixels;
+                        const portOk = c.ports >= rj45Needed;
+                        const isBest = i === bestIdx;
+                        const status = pixOk && portOk ? (isBest ? "best" : "ok") : (!pixOk && !portOk) ? "fail" : "warn";
+                        const dotColor = status === "best" ? "var(--green)" : status === "ok" ? "oklch(60% 0.170 155 / 0.6)" : status === "warn" ? "var(--orange)" : "var(--border)";
+                        const badgeLabel = status === "best" ? "Recommandé" : status === "ok" ? "Compatible" : status === "warn" ? "Partiel" : "Insuffisant";
+                        return (
+                          <div key={c.model} className={`ctrl-card ${status}`}>
+                            <div className="ctrl-status-dot" style={{ background: dotColor }} />
+                            <div className="ctrl-body">
+                              <div className="ctrl-model">{c.model}</div>
+                              <div className="ctrl-category">{c.category}</div>
+                              {(status === "best" || status === "warn") && (
+                                <div className="ctrl-notes" style={{ marginTop: 4 }}>
+                                  {!pixOk && <span style={{ color: "var(--orange)" }}>⚠ {(totalPixels/1000000).toFixed(2)} Mpx requis — capacité max {(c.maxPixels/1000000).toFixed(1)} Mpx. </span>}
+                                  {!portOk && <span style={{ color: "var(--orange)" }}>⚠ {rj45Needed} ports requis — {c.ports} disponibles. </span>}
+                                  {status === "best" && <span>{c.notes}</span>}
+                                </div>
+                              )}
+                            </div>
+                            <div className="ctrl-specs">
+                              <div className="ctrl-spec-row">
+                                <span className="ctrl-spec-val" style={{ color: portOk ? "var(--text)" : "var(--orange)" }}>{c.ports}</span>
+                                <span className="ctrl-spec-label">ports</span>
+                              </div>
+                              <div className="ctrl-spec-row">
+                                <span className="ctrl-spec-val" style={{ color: pixOk ? "var(--text)" : "var(--orange)" }}>{(c.maxPixels/1000000).toFixed(1)}</span>
+                                <span className="ctrl-spec-label">Mpx</span>
+                              </div>
+                              <span className={`ctrl-badge ${status}`}>{badgeLabel}</span>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+
                 <div className="checklist">
                   <div className="checklist-title">Checklist installation</div>
                   {[
