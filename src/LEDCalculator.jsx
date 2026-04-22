@@ -4,63 +4,90 @@ import { useState, useRef, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 
 // ── CONTRÔLEURS NOVASTAR ──────────────────────────────────────────────────────
-// pixels = capacité totale de chargement pixels ; ports = sorties Ethernet vers panneaux
+// ports = sorties Ethernet RJ45 vers panneaux LED
+// maxPixels = capacité totale de chargement pixels du contrôleur
 const NOVASTAR_CONTROLLERS = [
+  // ── Gamme MCTRL (cartes d'envoi PCIe) ──
   {
-    model: "MCTRL300",
-    category: "Carte d'envoi",
-    ports: 1,
-    maxPixels: 650_000,
-    maxResW: 1920, maxResH: 1080,
-    notes: "Embarquée dans PC/media server. Usage petite installation.",
+    model: "MCTRL300", serie: "MCTRL", category: "Carte d'envoi PCIe",
+    ports: 1, maxPixels: 650_000, maxResW: 1920, maxResH: 1080,
+    inputs: ["HDMI 1.4", "DVI"],
+    features: ["1 sortie ETH", "Format PCIe x1"],
+    notes: "Carte PCIe entrée de gamme. 1 sortie Ethernet. Idéale pour petites installations permanentes sur PC dédié (vitrine, affichage fixe).",
   },
   {
-    model: "MCTRL660 Pro",
-    category: "Carte d'envoi",
-    ports: 2,
-    maxPixels: 2_300_000,
-    maxResW: 3840, maxResH: 1080,
-    notes: "2 sorties Ethernet indépendantes. Populaire en touring.",
+    model: "MCTRL660 Pro", serie: "MCTRL", category: "Carte d'envoi PCIe",
+    ports: 2, maxPixels: 2_300_000, maxResW: 3840, maxResH: 1080,
+    inputs: ["HDMI 2.0", "DP 1.2", "DVI"],
+    features: ["2 sorties ETH indép.", "Dual output", "Format PCIe x4"],
+    notes: "Carte PCIe. 2 sorties Ethernet indépendantes. Scaler intégré. Polyvalente pour touring léger et installations moyennes sur PC dédié.",
   },
   {
-    model: "VX600",
-    category: "Boîtier tout-en-un",
-    ports: 6,
-    maxPixels: 3_000_000,
-    maxResW: 3840, maxResH: 1080,
-    notes: "6 sorties, entrées HDMI/SDI/DP. Standard de facto salle moyenne.",
+    model: "MCTRL4K", serie: "MCTRL", category: "Carte d'envoi PCIe",
+    ports: 4, maxPixels: 3_900_000, maxResW: 3840, maxResH: 2160,
+    inputs: ["HDMI 2.0", "DP 1.4"],
+    features: ["4K natif", "4 sorties ETH", "Format PCIe x8"],
+    notes: "Carte PCIe haut de gamme. 4K natif UHD. 4 sorties Ethernet indépendantes. Installations permanentes haute résolution sur PC dédié.",
+  },
+
+  // ── Gamme VX (boîtiers tout-en-un) ──
+  {
+    model: "VX1S", serie: "VX", category: "Boîtier tout-en-un",
+    ports: 4, maxPixels: 2_300_000, maxResW: 3840, maxResH: 1080,
+    inputs: ["HDMI 2.0", "DP 1.2"],
+    features: ["1U", "4 sorties ETH", "Media player"],
+    notes: "Boîtier 1U compact. 4 sorties Ethernet. Entrées HDMI/DP. Media player intégré. Salles fixes, petites scènes et événements légers.",
   },
   {
-    model: "VX1000",
-    category: "Boîtier tout-en-un",
-    ports: 10,
-    maxPixels: 6_500_000,
-    maxResW: 7680, maxResH: 1080,
-    notes: "10 sorties, haute capacité. Adapté grandes scènes.",
+    model: "VX600", serie: "VX", category: "Boîtier tout-en-un",
+    ports: 6, maxPixels: 2_600_000, maxResW: 3840, maxResH: 1080,
+    inputs: ["HDMI 2.0", "DP 1.2", "SDI"],
+    features: ["2U", "6 sorties ETH", "SDI", "Scaler"],
+    notes: "Boîtier 2U. 6 sorties Ethernet. Entrées HDMI/DP/SDI. Scaler intégré. Référence événementielle pour salles moyennes et scènes mid-scale.",
   },
   {
-    model: "VX1S",
-    category: "Boîtier tout-en-un",
-    ports: 8,
-    maxPixels: 2_300_000,
-    maxResW: 3840, maxResH: 1080,
-    notes: "8 sorties compactes. Bon compromis polyvalence/format.",
+    model: "VX1000", serie: "VX", category: "Boîtier tout-en-un",
+    ports: 10, maxPixels: 6_500_000, maxResW: 7680, maxResH: 1080,
+    inputs: ["HDMI 2.0", "DP 1.4", "SDI"],
+    features: ["2U", "10 sorties ETH", "Ultra-wide", "Scaler"],
+    notes: "Boîtier 2U. 10 sorties Ethernet. Résolution max 7680×1080. Idéal grandes scènes, bannières LED et murs panoramiques ultra-larges.",
   },
   {
-    model: "VX4S",
-    category: "Boîtier tout-en-un",
-    ports: 12,
-    maxPixels: 6_500_000,
-    maxResW: 3840, maxResH: 2160,
-    notes: "4K natif, 12 sorties. Haut de gamme pour productions broadcast.",
+    model: "VX4S", serie: "VX", category: "Boîtier tout-en-un",
+    ports: 4, maxPixels: 3_900_000, maxResW: 3840, maxResH: 2160,
+    inputs: ["HDMI 2.0", "DP 1.4", "12G-SDI"],
+    features: ["2U", "4K natif", "Media player", "Scaler avancé", "Multi-source"],
+    notes: "Boîtier 2U. 4 sorties + media player intégré. 4K UHD natif, scaler avancé, gestion multi-source. La référence événementielle 4K.",
   },
   {
-    model: "H9",
-    category: "Processeur vidéo",
-    ports: 18,
-    maxPixels: 13_000_000,
-    maxResW: 7680, maxResH: 4320,
-    notes: "18 sorties, multi-source, format scaler intégré. Flagship.",
+    model: "VX16S", serie: "VX", category: "Boîtier tout-en-un",
+    ports: 16, maxPixels: 10_400_000, maxResW: 7680, maxResH: 2160,
+    inputs: ["HDMI 2.0", "DP 1.4", "12G-SDI"],
+    features: ["3U", "16 sorties ETH", "Multi-zones", "8K-ready"],
+    notes: "Boîtier 3U. 16 sorties Ethernet. Résolution max 7680×2160. Très grandes installations permanentes et configurations multi-zones complexes.",
+  },
+
+  // ── Gamme H (processeurs vidéo broadcast) ──
+  {
+    model: "H2", serie: "H", category: "Processeur vidéo",
+    ports: 4, maxPixels: 2_300_000, maxResW: 3840, maxResH: 1080,
+    inputs: ["HDMI 2.0", "DP 1.2", "DVI", "SDI"],
+    features: ["Scaler broadcast", "Multi-layer", "Failover auto", "Multiviewer"],
+    notes: "Processeur compact H-series. Scaler broadcast, traitement multi-layer et failover automatique intégrés. 4 entrées simultanées. Idéal événements mid-scale avec sources mixtes.",
+  },
+  {
+    model: "H5", serie: "H", category: "Processeur vidéo",
+    ports: 12, maxPixels: 6_500_000, maxResW: 3840, maxResH: 2160,
+    inputs: ["HDMI 2.0", "DP 1.4", "12G-SDI", "Fibre optique"],
+    features: ["4K natif", "12 sorties ETH", "Multi-source", "Broadcast grade", "Multi-layer", "Failover"],
+    notes: "12 sorties Ethernet. 4K natif UHD. Multi-source broadcast, traitement multi-layer avancé, failover. Référence productions événementielles et broadcast mid à large scale.",
+  },
+  {
+    model: "H9", serie: "H", category: "Processeur vidéo",
+    ports: 18, maxPixels: 13_000_000, maxResW: 7680, maxResH: 4320,
+    inputs: ["HDMI 2.0", "DP 1.4", "12G-SDI", "Fibre optique", "4K HDMI"],
+    features: ["8K natif", "18 sorties ETH", "Multi-source", "Flagship", "Broadcast premium", "Failover"],
+    notes: "18 sorties Ethernet. 8K natif. Multi-source broadcast haut de gamme, traitement multi-layer maximal, failover avancé. Flagship de la gamme H pour productions premium et grandes tournées.",
   },
 ];
 
@@ -472,30 +499,53 @@ const css = `
   .section-label { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.14em; font-family: var(--font-mono); margin-bottom: 8px; margin-top: 4px; }
 
   /* ── NOVASTAR CONTROLLERS ── */
-  .ctrl-grid { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .ctrl-series-group { margin-bottom: 14px; }
+  .ctrl-series-title {
+    font-size: 9px; font-weight: 700; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.16em; font-family: var(--font-mono);
+    padding: 5px 0; border-bottom: 1px solid var(--border); margin-bottom: 6px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .ctrl-serie-pip { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .ctrl-grid { display: flex; flex-direction: column; gap: 5px; }
   .ctrl-card {
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-    padding: 10px 13px; display: grid; grid-template-columns: auto 1fr auto; gap: 10px;
-    align-items: center; transition: border-color 0.15s;
+    padding: 9px 12px; display: grid; grid-template-columns: auto 1fr auto; gap: 9px;
+    align-items: flex-start; transition: border-color 0.15s;
   }
-  .ctrl-card.ok     { border-color: oklch(60% 0.170 155 / 0.5); background: oklch(60% 0.170 155 / 0.04); }
+  .ctrl-card.ok      { border-color: oklch(60% 0.170 155 / 0.4); background: oklch(60% 0.170 155 / 0.03); }
   .ctrl-card.ok.best { border-color: var(--green); box-shadow: 0 0 0 1px oklch(60% 0.170 155 / 0.2); }
-  .ctrl-card.warn   { border-color: oklch(70% 0.155 55 / 0.4); background: oklch(70% 0.155 55 / 0.03); }
-  .ctrl-card.fail   { border-color: var(--border); background: var(--surface2); opacity: 0.55; }
-  .ctrl-status-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .ctrl-body        { min-width: 0; }
-  .ctrl-model       { font-size: 12px; font-weight: 700; color: var(--text); font-family: var(--font-mono); }
-  .ctrl-category    { font-size: 9.5px; color: var(--text-dim); margin-top: 1px; }
-  .ctrl-notes       { font-size: 10px; color: var(--text-dim); margin-top: 3px; line-height: 1.4; }
-  .ctrl-specs       { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
-  .ctrl-spec-row    { display: flex; gap: 5px; align-items: center; }
-  .ctrl-spec-val    { font-size: 11px; font-weight: 600; font-family: var(--font-mono); color: var(--text); }
-  .ctrl-spec-label  { font-size: 9px; color: var(--text-dim); font-family: var(--font-mono); }
-  .ctrl-badge       { font-size: 8.5px; font-weight: 700; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.06em; text-transform: uppercase; }
-  .ctrl-badge.best  { background: oklch(60% 0.170 155 / 0.15); color: var(--green); }
-  .ctrl-badge.ok    { background: oklch(60% 0.170 155 / 0.08); color: var(--green); opacity: 0.7; }
-  .ctrl-badge.warn  { background: oklch(70% 0.155 55 / 0.12); color: var(--orange); }
-  .ctrl-badge.fail  { background: var(--surface3); color: var(--text-dim); }
+  .ctrl-card.premium { border-color: oklch(72% 0.15 295 / 0.4); background: oklch(72% 0.15 295 / 0.03); }
+  .ctrl-card.premium.best { border-color: oklch(72% 0.15 295 / 0.8); box-shadow: 0 0 0 1px oklch(72% 0.15 295 / 0.2); }
+  .ctrl-card.warn    { border-color: oklch(70% 0.155 55 / 0.4); background: oklch(70% 0.155 55 / 0.03); }
+  .ctrl-card.fail    { border-color: var(--border); background: var(--surface2); opacity: 0.5; }
+  .ctrl-status-dot   { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+  .ctrl-body         { min-width: 0; }
+  .ctrl-head         { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+  .ctrl-model        { font-size: 12px; font-weight: 700; color: var(--text); font-family: var(--font-mono); }
+  .ctrl-category     { font-size: 9px; color: var(--text-dim); }
+  .ctrl-meta         { display: flex; gap: 10px; margin-top: 3px; flex-wrap: wrap; }
+  .ctrl-meta-item    { font-size: 9px; color: var(--text-dim); font-family: var(--font-mono); }
+  .ctrl-meta-item strong { color: var(--text-muted); font-weight: 600; }
+  .ctrl-chips        { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 5px; }
+  .ctrl-chip {
+    font-size: 7.5px; font-weight: 600; padding: 1.5px 5px; border-radius: 3px;
+    font-family: var(--font-mono); border: 1px solid; letter-spacing: 0.03em;
+  }
+  .ctrl-chip.feat    { background: oklch(60% 0.170 155 / 0.08); color: var(--green); border-color: oklch(60% 0.170 155 / 0.2); }
+  .ctrl-chip.inp     { background: oklch(44% 0.188 245 / 0.08); color: var(--accent); border-color: oklch(44% 0.188 245 / 0.2); }
+  .ctrl-chip.prem    { background: oklch(72% 0.15 295 / 0.1); color: oklch(72% 0.15 295); border-color: oklch(72% 0.15 295 / 0.25); }
+  .ctrl-notes        { font-size: 9.5px; color: var(--text-dim); margin-top: 5px; line-height: 1.5; }
+  .ctrl-specs        { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; padding-top: 1px; }
+  .ctrl-spec-pair    { display: flex; flex-direction: column; align-items: flex-end; }
+  .ctrl-spec-val     { font-size: 12px; font-weight: 700; font-family: var(--font-mono); color: var(--text); line-height: 1; }
+  .ctrl-spec-label   { font-size: 8px; color: var(--text-dim); font-family: var(--font-mono); margin-top: 1px; }
+  .ctrl-badge        { font-size: 8px; font-weight: 700; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+  .ctrl-badge.best   { background: oklch(60% 0.170 155 / 0.15); color: var(--green); }
+  .ctrl-badge.prem   { background: oklch(72% 0.15 295 / 0.12); color: oklch(72% 0.15 295); }
+  .ctrl-badge.ok     { background: oklch(60% 0.170 155 / 0.08); color: var(--green); opacity: 0.7; }
+  .ctrl-badge.warn   { background: oklch(70% 0.155 55 / 0.12); color: var(--orange); }
+  .ctrl-badge.fail   { background: var(--surface3); color: var(--text-dim); }
 `;
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
@@ -1385,47 +1435,99 @@ export default function LEDCalculator({ onAdmin }) {
                 {/* ── CONTRÔLEURS NOVASTAR ── */}
                 <div style={{ marginBottom: 12 }}>
                   <div className="section-label" style={{ marginBottom: 10 }}>Contrôleur Novastar — compatibilité</div>
-                  <div className="ctrl-grid">
-                    {(() => {
-                      const sorted = [...NOVASTAR_CONTROLLERS].sort((a, b) => a.maxPixels - b.maxPixels);
-                      const bestIdx = sorted.findIndex(c => c.maxPixels >= totalPixels && c.ports >= rj45Needed);
-                      return sorted.map((c, i) => {
-                        const pixOk  = c.maxPixels >= totalPixels;
-                        const portOk = c.ports >= rj45Needed;
-                        const isBest = i === bestIdx;
-                        const status = pixOk && portOk ? (isBest ? "best" : "ok") : (!pixOk && !portOk) ? "fail" : "warn";
-                        const dotColor = status === "best" ? "var(--green)" : status === "ok" ? "oklch(60% 0.170 155 / 0.6)" : status === "warn" ? "var(--orange)" : "var(--border)";
-                        const badgeLabel = status === "best" ? "Recommandé" : status === "ok" ? "Compatible" : status === "warn" ? "Partiel" : "Insuffisant";
-                        return (
-                          <div key={c.model} className={`ctrl-card ${status}`}>
-                            <div className="ctrl-status-dot" style={{ background: dotColor }} />
-                            <div className="ctrl-body">
-                              <div className="ctrl-model">{c.model}</div>
-                              <div className="ctrl-category">{c.category}</div>
-                              {(status === "best" || status === "warn") && (
-                                <div className="ctrl-notes" style={{ marginTop: 4 }}>
-                                  {!pixOk && <span style={{ color: "var(--orange)" }}>⚠ {(totalPixels/1000000).toFixed(2)} Mpx requis — capacité max {(c.maxPixels/1000000).toFixed(1)} Mpx. </span>}
-                                  {!portOk && <span style={{ color: "var(--orange)" }}>⚠ {rj45Needed} ports requis — {c.ports} disponibles. </span>}
-                                  {status === "best" && <span>{c.notes}</span>}
-                                </div>
-                              )}
-                            </div>
-                            <div className="ctrl-specs">
-                              <div className="ctrl-spec-row">
-                                <span className="ctrl-spec-val" style={{ color: portOk ? "var(--text)" : "var(--orange)" }}>{c.ports}</span>
-                                <span className="ctrl-spec-label">ports</span>
-                              </div>
-                              <div className="ctrl-spec-row">
-                                <span className="ctrl-spec-val" style={{ color: pixOk ? "var(--text)" : "var(--orange)" }}>{(c.maxPixels/1000000).toFixed(1)}</span>
-                                <span className="ctrl-spec-label">Mpx</span>
-                              </div>
-                              <span className={`ctrl-badge ${status}`}>{badgeLabel}</span>
-                            </div>
+                  {(() => {
+                    const allSorted = [...NOVASTAR_CONTROLLERS].sort((a, b) => a.maxPixels - b.maxPixels);
+                    const bestModel = allSorted.find(c => c.maxPixels >= totalPixels && c.ports >= rj45Needed)?.model ?? null;
+                    const SERIES = [
+                      { id: "MCTRL", label: "Cartes d'envoi PCIe",       pip: "var(--accent)" },
+                      { id: "VX",    label: "Boîtiers tout-en-un",        pip: "var(--accent2)" },
+                      { id: "H",     label: "Processeurs vidéo · H-Series", pip: "oklch(72% 0.15 295)" },
+                    ];
+                    return SERIES.map(({ id, label, pip }) => {
+                      const controllers = NOVASTAR_CONTROLLERS
+                        .filter(c => c.serie === id)
+                        .sort((a, b) => a.maxPixels - b.maxPixels);
+                      return (
+                        <div key={id} className="ctrl-series-group">
+                          <div className="ctrl-series-title">
+                            <div className="ctrl-serie-pip" style={{ background: pip }} />
+                            {label}
                           </div>
-                        );
-                      });
-                    })()}
-                  </div>
+                          <div className="ctrl-grid">
+                            {controllers.map(c => {
+                              const pixOk    = c.maxPixels >= totalPixels;
+                              const portOk   = c.ports >= rj45Needed;
+                              const isBest   = c.model === bestModel;
+                              const isPremium = c.serie === "H";
+                              const compat   = pixOk && portOk;
+                              const cardClass = compat
+                                ? (isPremium ? "premium" : "ok") + (isBest ? " best" : "")
+                                : (!pixOk && !portOk) ? "fail" : "warn";
+                              const dotColor = isBest
+                                ? (isPremium ? "oklch(72% 0.15 295)" : "var(--green)")
+                                : compat
+                                  ? (isPremium ? "oklch(72% 0.15 295 / 0.7)" : "oklch(60% 0.170 155 / 0.6)")
+                                  : (pixOk || portOk) ? "var(--orange)" : "var(--border)";
+                              const badgeClass = isBest ? (isPremium ? "prem" : "best")
+                                : compat ? (isPremium ? "prem" : "ok")
+                                : compat === false && (pixOk || portOk) ? "warn" : "fail";
+                              const badgeLabel = isBest
+                                ? (isPremium ? "★ Recommandé" : "Recommandé")
+                                : compat
+                                  ? (isPremium ? "Premium" : "Compatible")
+                                  : (pixOk || portOk) ? "Partiel" : "Insuffisant";
+                              return (
+                                <div key={c.model} className={`ctrl-card ${cardClass}`}>
+                                  <div className="ctrl-status-dot" style={{ background: dotColor }} />
+                                  <div className="ctrl-body">
+                                    <div className="ctrl-head">
+                                      <span className="ctrl-model">{c.model}</span>
+                                      <span className="ctrl-category">{c.category}</span>
+                                    </div>
+                                    <div className="ctrl-meta">
+                                      <span className="ctrl-meta-item"><strong style={{ color: portOk ? undefined : "var(--orange)" }}>{c.ports}</strong> port{c.ports > 1 ? "s" : ""} ETH</span>
+                                      <span className="ctrl-meta-item"><strong style={{ color: pixOk ? undefined : "var(--orange)" }}>{(c.maxPixels / 1_000_000).toFixed(1)}</strong> Mpx max</span>
+                                      <span className="ctrl-meta-item">{c.maxResW}×{c.maxResH}</span>
+                                    </div>
+                                    {!compat && (
+                                      <div className="ctrl-notes" style={{ color: "var(--orange)", marginTop: 4 }}>
+                                        {!pixOk && <span>⚠ {(totalPixels/1_000_000).toFixed(2)} Mpx requis · max {(c.maxPixels/1_000_000).toFixed(1)} Mpx. </span>}
+                                        {!portOk && <span>⚠ {rj45Needed} ports requis · {c.ports} disponibles.</span>}
+                                      </div>
+                                    )}
+                                    {compat && (
+                                      <div className="ctrl-chips">
+                                        {c.features.map(f => <span key={f} className={`ctrl-chip ${isPremium ? "prem" : "feat"}`}>{f}</span>)}
+                                      </div>
+                                    )}
+                                    {compat && (
+                                      <div className="ctrl-chips">
+                                        {c.inputs.map(inp => <span key={inp} className="ctrl-chip inp">{inp}</span>)}
+                                      </div>
+                                    )}
+                                    {(isBest || (isPremium && compat)) && (
+                                      <div className="ctrl-notes">{c.notes}</div>
+                                    )}
+                                  </div>
+                                  <div className="ctrl-specs">
+                                    <div className="ctrl-spec-pair">
+                                      <span className="ctrl-spec-val" style={{ color: portOk ? undefined : "var(--orange)" }}>{c.ports}</span>
+                                      <span className="ctrl-spec-label">ports</span>
+                                    </div>
+                                    <div className="ctrl-spec-pair">
+                                      <span className="ctrl-spec-val" style={{ color: pixOk ? undefined : "var(--orange)" }}>{(c.maxPixels/1_000_000).toFixed(1)}</span>
+                                      <span className="ctrl-spec-label">Mpx</span>
+                                    </div>
+                                    <span className={`ctrl-badge ${badgeClass}`}>{badgeLabel}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
 
                 <div className="checklist">
