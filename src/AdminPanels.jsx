@@ -204,6 +204,36 @@ if (editing) {
     fetchPanels();
   };
 
+  const downloadTemplate = () => {
+    const header = CSV_COLUMNS.join(",");
+    const desc = [
+      "VOTRE_MARQUE",
+      "SMD",
+      "NOM_SERIE",
+      "REF-UNIQUE-001",
+      "2.5",
+      "240",
+      "135",
+      "0.6",
+      "0.3375",
+      "8.5",
+      "5000",
+      "350",
+      "150",
+      "3840",
+      "535000",
+      "2200",
+      "Exemple — remplacez toutes les valeurs",
+    ].join(",");
+    const blob = new Blob([header + "\n" + desc + "\n"], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "modele-fournisseur.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="admin-wrap">
       <div className="admin-topbar">
@@ -219,6 +249,7 @@ if (editing) {
           <div className="admin-title">Gestion des panneaux LED</div>
           <div style={{ display:"flex", gap:8 }}>
             <input ref={csvInputRef} type="file" accept=".csv,text/csv" style={{ display:"none" }} onChange={handleCSVFile} />
+            <button className="btn-secondary" onClick={downloadTemplate}>⬇ Modèle CSV</button>
             <button className="btn-secondary" onClick={() => csvInputRef.current?.click()}>⬆ Import CSV</button>
             <button className="btn-primary" onClick={openAdd}>+ Ajouter un panneau</button>
           </div>
