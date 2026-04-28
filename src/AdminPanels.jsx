@@ -19,7 +19,9 @@ const css = `
   .panel-table tr:hover td { background: rgba(0,113,227,0.02); }
   .badge-active { background: rgba(52,199,89,0.1); color: #34c759; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
   .badge-inactive { background: rgba(142,142,147,0.1); color: #8e8e93; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-  .actions-row { display: flex; gap: 6px; }
+  .actions-row { display: flex; gap: 6px; flex-wrap: nowrap; align-items: center; }
+  .btn-delete { padding: 7px 10px; border-radius: 8px; border: none; background: rgba(255,59,48,0.15); color: #ff3b30; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .btn-delete:hover { background: rgba(255,59,48,0.28); }
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 200; }
   .modal { background: white; border-radius: 16px; padding: 28px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.15); }
   .modal-title { font-size: 18px; font-weight: 700; color: #1d1d1f; margin-bottom: 20px; }
@@ -331,7 +333,7 @@ if (editing) {
                         <button className="btn-danger" onClick={() => toggleActive(p)}>
                           {p.is_active ? "Désactiver" : "Activer"}
                         </button>
-                        <button className="btn-danger" onClick={() => deletePanel(p)} title="Supprimer définitivement">✕</button>
+                        <button className="btn-delete" onClick={() => deletePanel(p)}>Suppr.</button>
                       </div>
                     </td>
                   </tr>
