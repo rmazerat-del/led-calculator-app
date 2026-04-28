@@ -57,11 +57,16 @@ const CSV_COLUMNS = [
 ];
 
 function parseCSV(text) {
-  const lines = text.trim().split(/\r?\n/);
+  const allLines = text.trim().split(/\r?\n/);
+  // Skip Excel separator hint line (sep=, or sep=;)
+  const lines = allLines.filter(l => !l.toLowerCase().startsWith("sep="));
   if (lines.length < 2) return { headers: [], rows: [] };
-  const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
+  // Auto-detect delimiter: semicolon (French Excel) or comma
+  const delim = lines[0].includes(";") ? ";" : ",";
+  const headers = lines[0].split(delim).map(h => h.trim().replace(/^"|"$/g, ""));
   const rows = lines.slice(1).map(line => {
-    const vals = line.match(/(".*?"|[^,]+|(?<=,)(?=,)|(?<=,)$|^(?=,))/g) || [];
+    const escaped = new RegExp(`(".*?"|[^${delim}]+|(?<=${delim})(?=${delim})|(?<=${delim})$|^(?=${delim}))`, "g");
+    const vals = line.match(escaped) || [];
     const obj = {};
     headers.forEach((h, i) => { obj[h] = (vals[i] || "").trim().replace(/^"|"$/g, ""); });
     return obj;
@@ -205,7 +210,8 @@ if (editing) {
   };
 
   const downloadTemplate = () => {
-    const header = CSV_COLUMNS.join(",");
+    const sep = ";";
+    const header = CSV_COLUMNS.join(sep);
     const desc = [
       "VOTRE_MARQUE",
       "SMD",
@@ -224,8 +230,10 @@ if (editing) {
       "535000",
       "2200",
       "Exemple — remplacez toutes les valeurs",
-    ].join(",");
-    const blob = new Blob([header + "\n" + desc + "\n"], { type: "text/csv;charset=utf-8;" });
+    ].join(sep);
+    // BOM + sep hint ensures Excel (FR/EN) opens columns correctly
+    const bom = "﻿";
+    const blob = new Blob([bom + "sep=;\n" + header + "\n" + desc + "\n"], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
