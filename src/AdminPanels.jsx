@@ -209,6 +209,23 @@ if (editing) {
     fetchPanels();
   };
 
+  const deletePanel = async (panel) => {
+    if (!window.confirm(`Supprimer définitivement "${panel.panel_ref}" ?\nCette action est irréversible.`)) return;
+    const { error } = await supabase.from("products").delete().eq("id", panel.id);
+    if (error) setAlert({ type: "error", msg: `Erreur : ${error.message}` });
+    else { setAlert({ type: "success", msg: `"${panel.panel_ref}" supprimé.` }); fetchPanels(); }
+  };
+
+  const purgeInactive = async () => {
+    const inactifs = panels.filter(p => !p.is_active);
+    if (inactifs.length === 0) { setAlert({ type: "error", msg: "Aucun panneau inactif à supprimer." }); return; }
+    if (!window.confirm(`Supprimer définitivement ${inactifs.length} panneau(x) inactif(s) ?\n\n${inactifs.map(p => p.panel_ref).join("\n")}\n\nCette action est irréversible.`)) return;
+    const ids = inactifs.map(p => p.id);
+    const { error } = await supabase.from("products").delete().in("id", ids);
+    if (error) setAlert({ type: "error", msg: `Erreur : ${error.message}` });
+    else { setAlert({ type: "success", msg: `${inactifs.length} panneau(x) inactif(s) supprimé(s).` }); fetchPanels(); }
+  };
+
   const downloadTemplate = () => {
     const sep = ";";
     const header = CSV_COLUMNS.join(sep);
@@ -259,6 +276,7 @@ if (editing) {
             <input ref={csvInputRef} type="file" accept=".csv,text/csv" style={{ display:"none" }} onChange={handleCSVFile} />
             <button className="btn-secondary" onClick={downloadTemplate}>⬇ Modèle CSV</button>
             <button className="btn-secondary" onClick={() => csvInputRef.current?.click()}>⬆ Import CSV</button>
+            <button className="btn-danger" onClick={purgeInactive}>🗑 Purger les inactifs</button>
             <button className="btn-primary" onClick={openAdd}>+ Ajouter un panneau</button>
           </div>
         </div>
@@ -313,6 +331,7 @@ if (editing) {
                         <button className="btn-danger" onClick={() => toggleActive(p)}>
                           {p.is_active ? "Désactiver" : "Activer"}
                         </button>
+                        <button className="btn-danger" onClick={() => deletePanel(p)} title="Supprimer définitivement">✕</button>
                       </div>
                     </td>
                   </tr>
