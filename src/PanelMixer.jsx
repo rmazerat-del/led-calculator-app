@@ -90,8 +90,16 @@ function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
       });
     }
   }
+  // Portrait score: sum of (height/width) per panel — higher = more vertical panels
+  const portraitScore = sol => sol.layout.reduce((s, t) => s + (t.hMm / t.wMm) * t.count, 0);
+
   return solutions
-    .sort((a, b) => a.waste - b.waste || a.types - b.types || a.totalPanels - b.totalPanels)
+    .sort((a, b) => {
+      if (a.waste !== b.waste) return a.waste - b.waste;
+      if (a.totalPanels !== b.totalPanels) return a.totalPanels - b.totalPanels;
+      // Same panel count → prefer taller panels (higher portrait score)
+      return portraitScore(b) - portraitScore(a);
+    })
     .slice(0, 8);
 }
 
