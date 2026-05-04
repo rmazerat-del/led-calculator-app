@@ -111,10 +111,28 @@ export default function AdminPanels({ onBack }) {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const { rows } = parseCSV(ev.target.result);
+      const refs = rows.map(r => r.panel_ref).filter(Boolean);
+      const dupRefs = refs.filter((r, i) => refs.indexOf(r) !== i);
       const validated = rows.map(r => {
         const numericFields = ["pixel_pitch_mm","resolution_w","resolution_h","panel_width_m","panel_height_m","weight_kgs","nits","power_max_w","power_avg_w"];
-        const hasErrors = !r.panel_ref || numericFields.some(f => r[f] === "" || isNaN(Number(r[f])));
-        return { ...r, _error: hasErrors };
+        if (!r.panel_ref) return { ...r, _error: true, _errorMsg: "Référence panneau manquante" };
+        if (numericFields.some(f => r[f] === "" || isNaN(Number(r[f])))) return { ...r, _error: true, _errorMsg: "Valeur numérique invalide" };
+        // Auto-convert mm → m for dimension fields (suppliers often use mm)
+        let w = parseFloat(r.panel_width_m);
+        let h = parseFloat(r.panel_height_m);
+        let converted = false;
+        if (w > 10) { w = +(w / 1000).toFixed(4); converted = true; }
+        if (h > 10) { h = +(h / 1000).toFixed(4); converted = true; }
+        const isDup = dupRefs.includes(r.panel_ref);
+        return {
+          ...r,
+          panel_width_m: String(w),
+          panel_height_m: String(h),
+          _error: false,
+          _errorMsg: null,
+          _converted: converted,
+          _dupRef: isDup,
+        };
       });
       setCsvRows(validated);
       setShowCSV(true);
@@ -140,7 +158,9 @@ export default function AdminPanels({ onBack }) {
     }));
     const { error } = await supabase.from("products").upsert(payloads, { onConflict: "panel_ref" });
     if (error) {
-      setAlert({ type: "error", msg: `Import échoué: ${error.message}` });
+      const detail = error.details ? ` — ${error.details}` : "";
+      const hint = error.hint ? ` (${error.hint})` : "";
+      setAlert({ type: "error", msg: `Import échoué: ${error.message}${detail}${hint}` });
     } else {
       setAlert({ type: "success", msg: `${payloads.length} panneau(x) importé(s) !` });
       setCsvRows([]); setShowCSV(false);
@@ -352,6 +372,16 @@ if (editing) {
               {csvRows.filter(r => !r._error).length} valide(s) · {csvRows.filter(r => r._error).length} erreur(s). Les lignes en rouge seront ignorées.
               Les entrées existantes (même <code>panel_ref</code>) seront mises à jour.
             </div>
+            {csvRows.some(r => r._converted) && (
+              <div style={{ fontSize:12, background:"rgba(255,149,0,0.1)", color:"#c45e00", padding:"8px 12px", borderRadius:8, marginBottom:8, fontWeight:600 }}>
+                ⚠ Dimensions converties automatiquement mm → m (valeurs &gt; 10 divisées par 1000)
+              </div>
+            )}
+            {csvRows.some(r => r._dupRef) && (
+              <div style={{ fontSize:12, background:"rgba(255,149,0,0.1)", color:"#c45e00", padding:"8px 12px", borderRadius:8, marginBottom:8, fontWeight:600 }}>
+                ⚠ Plusieurs lignes ont le même <code>panel_ref</code> — seule la dernière sera conservée par référence
+              </div>
+            )}
             <div style={{ fontSize:11, color:"#6e6e73", marginBottom:10 }}>
               Format CSV attendu — colonnes : <code>{CSV_COLUMNS.join(", ")}</code>
             </div>
@@ -371,7 +401,16 @@ if (editing) {
                       <td>{r.nits}</td>
                       <td>{r.power_max_w}</td>
                       <td>{r.weight_kgs}</td>
-                      <td>{r._error ? "⚠ Erreur" : "✓ OK"}</td>
+                      <td>
+                        {r._error
+                          ? <span style={{color:"#ff3b30",fontWeight:700}}>⚠ {r._errorMsg || "Erreur"}</span>
+                          : r._converted
+                            ? <span style={{color:"#ff9500",fontWeight:600}}>↔ Dim. converties</span>
+                            : r._dupRef
+                              ? <span style={{color:"#ff9500",fontWeight:600}}>⚠ Réf. dupliquée</span>
+                              : <span style={{color:"#34c759",fontWeight:600}}>✓ OK</span>
+                        }
+                      </td>
                     </tr>
                   ))}
                 </tbody>
