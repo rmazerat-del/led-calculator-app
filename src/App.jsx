@@ -1,6 +1,7 @@
 import { useState } from "react";
 import LEDCalculator from "./LEDCalculator";
 import AdminPanels from "./AdminPanels";
+import PanelMixer from "./PanelMixer";
 
 const ADMIN_PASSWORD = "Poisson95."; // changez ceci !
 
@@ -9,22 +10,14 @@ export default function App() {
   const [adminUnlocked, setAdminUnlocked] = useState(false);
 
   const handleAdminClick = () => {
-    if (adminUnlocked) {
-      setPage("admin");
-      return;
-    }
+    if (adminUnlocked) { setPage("admin"); return; }
     const pwd = prompt("Mot de passe administrateur :");
-    if (pwd === ADMIN_PASSWORD) {
-      setAdminUnlocked(true);
-      setPage("admin");
-    } else if (pwd !== null) {
-      alert("Mot de passe incorrect.");
-    }
+    if (pwd === ADMIN_PASSWORD) { setAdminUnlocked(true); setPage("admin"); }
+    else if (pwd !== null) alert("Mot de passe incorrect.");
   };
 
-  if (page === "admin" && adminUnlocked) {
-    return <AdminPanels onBack={() => setPage("calculator")} />;
-  }
+  if (page === "admin" && adminUnlocked) return <AdminPanels onBack={() => setPage("calculator")} />;
+  if (page === "mixer") return <PanelMixer onBack={() => setPage("calculator")} />;
 
-  return <LEDCalculator onAdmin={handleAdminClick} />;
+  return <LEDCalculator onAdmin={handleAdminClick} onMixer={() => setPage("mixer")} />;
 }

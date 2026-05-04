@@ -838,7 +838,7 @@ async function generatePDF(selected, result, quality) {
 }
 
 // ── COMPOSANT PRINCIPAL ───────────────────────────────────────────────────────
-export default function LEDCalculator({ onAdmin }) {
+export default function LEDCalculator({ onAdmin, onMixer }) {
   const [products, setProducts]       = useState(STATIC_PRODUCTS);
   const [selIdx, setSelIdx]           = useState(0);
   const [brandFilter, setBrandFilter] = useState("all");
@@ -1095,6 +1095,7 @@ export default function LEDCalculator({ onAdmin }) {
           <div className="topbar-badge" style={{ color: quality.color, borderColor: quality.color + "55", background: quality.color + "18" }}>
             {quality.label}
           </div>
+          {onMixer && <button onClick={onMixer} className="admin-btn" style={{background:"linear-gradient(145deg,#6f42c1,#9d6bff)",color:"white",border:"none"}}>⚡ Mix</button>}
           {onAdmin && <button onClick={onAdmin} className="admin-btn">Admin</button>}
           <button onClick={handlePDF} disabled={pdfLoading} className="pdf-topbar-btn">
             {pdfLoading ? "⏳ Génération…" : "⬇ Exporter PDF"}
