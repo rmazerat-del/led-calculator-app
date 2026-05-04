@@ -9,7 +9,8 @@ function roundMm(meters) {
 
 function findCombinations(sizesMm, targetMm, toleranceMm = 50) {
   if (targetMm <= 0 || sizesMm.length === 0) return [];
-  const sorted = [...new Set(sizesMm)].sort((a, b) => a - b);
+  // Largest first → algo naturally finds fewest-panel solutions earliest
+  const sorted = [...new Set(sizesMm)].sort((a, b) => b - a);
   const results = [];
   const seen = new Set();
 
@@ -36,10 +37,11 @@ function findCombinations(sizesMm, targetMm, toleranceMm = 50) {
   search(0, targetMm, {});
   return results.sort((a, b) => {
     if (a.waste !== b.waste) return a.waste - b.waste;
-    const at = Object.keys(a.combo).length, bt = Object.keys(b.combo).length;
-    if (at !== bt) return at - bt;
-    return Object.values(a.combo).reduce((s, v) => s + v, 0) -
-           Object.values(b.combo).reduce((s, v) => s + v, 0);
+    // Fewer total panels = preferred (favors large panels)
+    const aCount = Object.values(a.combo).reduce((s, v) => s + v, 0);
+    const bCount = Object.values(b.combo).reduce((s, v) => s + v, 0);
+    if (aCount !== bCount) return aCount - bCount;
+    return Object.keys(a.combo).length - Object.keys(b.combo).length;
   });
 }
 
@@ -320,19 +322,18 @@ const css = `
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function PanelMixer({ onBack }) {
-  const [allPanels, setAllPanels]       = useState([]);
-  const [loading, setLoading]           = useState(true);
-  const [filterBrand, setFilterBrand]   = useState("");
-  const [filterPitch, setFilterPitch]   = useState("");
-  const [selectedRefs, setSelectedRefs] = useState(new Set());
+  const [allPanels, setAllPanels]     = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [filterBrand, setFilterBrand] = useState("");
+  const [filterPitch, setFilterPitch] = useState("");
 
-  const [targetW, setTargetW]       = useState("");
-  const [targetH, setTargetH]       = useState("");
-  const [tolerance, setTolerance]   = useState("0");
+  const [targetW, setTargetW]     = useState("");
+  const [targetH, setTargetH]     = useState("");
+  const [tolerance, setTolerance] = useState("0");
 
-  const [solutions, setSolutions]     = useState(null);
-  const [solving, setSolving]         = useState(false);
-  const [chosenSol, setChosenSol]     = useState(null);
+  const [solutions, setSolutions] = useState(null);
+  const [solving, setSolving]     = useState(false);
+  const [chosenSol, setChosenSol] = useState(null);
 
   useEffect(() => {
     const tag = document.createElement("style");
@@ -346,34 +347,23 @@ export default function PanelMixer({ onBack }) {
       .then(({ data }) => { setAllPanels(data || []); setLoading(false); });
   }, []);
 
-  const brands  = [...new Set(allPanels.map(p => p.marque).filter(Boolean))].sort();
+  const brands = [...new Set(allPanels.map(p => p.marque).filter(Boolean))].sort();
   const pitches = [...new Set(
     allPanels.filter(p => !filterBrand || p.marque === filterBrand).map(p => p.pixel_pitch_mm)
   )].sort((a, b) => a - b);
-  const visiblePanels = allPanels.filter(p =>
+
+  // All visible panels are automatically included — no manual selection needed
+  const activePanels = allPanels.filter(p =>
     (!filterBrand || p.marque === filterBrand) &&
     (!filterPitch || String(p.pixel_pitch_mm) === filterPitch)
   );
 
-  const togglePanel = (ref) => {
-    setSelectedRefs(prev => { const n = new Set(prev); n.has(ref) ? n.delete(ref) : n.add(ref); return n; });
-    setSolutions(null); setChosenSol(null);
-  };
-
-  const toggleAll = () => {
-    const all = visiblePanels.map(p => p.panel_ref);
-    const allSel = all.every(r => selectedRefs.has(r));
-    setSelectedRefs(prev => { const n = new Set(prev); all.forEach(r => allSel ? n.delete(r) : n.add(r)); return n; });
-    setSolutions(null); setChosenSol(null);
-  };
-
   const handleSolve = () => {
-    const panels = allPanels.filter(p => selectedRefs.has(p.panel_ref));
-    if (!panels.length || !targetW || !targetH) return;
+    if (!activePanels.length || !targetW || !targetH) return;
     setSolving(true); setSolutions(null); setChosenSol(null);
     setTimeout(() => {
       const sols = solvePanelMix(
-        panels,
+        activePanels,
         Math.round(parseFloat(targetW) * 1000),
         Math.round(parseFloat(targetH) * 1000),
         parseInt(tolerance) || 0
@@ -383,7 +373,7 @@ export default function PanelMixer({ onBack }) {
     }, 10);
   };
 
-  const canSolve = selectedRefs.size > 0 && parseFloat(targetW) > 0 && parseFloat(targetH) > 0;
+  const canSolve = activePanels.length > 0 && parseFloat(targetW) > 0 && parseFloat(targetH) > 0;
 
   return (
     <div className="mixer-wrap">
@@ -406,43 +396,41 @@ export default function PanelMixer({ onBack }) {
           Trouvez la combinaison optimale de panneaux pour remplir n'importe quelle dimension cible
         </div>
 
-        {/* Étape 1 — Sélection */}
+        {/* Étape 1 — Filtre */}
         <div className="mixer-form-card">
           <div className="mixer-form-title">
             <span className="mixer-step-badge">1</span>
-            Sélectionner les panneaux disponibles
+            Filtrer le catalogue (optionnel)
+          </div>
+          <div style={{fontSize:13,color:"#6e6e73",marginBottom:14}}>
+            Tous les panneaux actifs sont automatiquement pris en compte. Filtrez si vous souhaitez restreindre à une marque ou un pitch précis.
           </div>
           <div className="mixer-filters">
             <select className="mixer-select" style={{width:"auto"}} value={filterBrand}
-              onChange={e => { setFilterBrand(e.target.value); setFilterPitch(""); setSelectedRefs(new Set()); setSolutions(null); setChosenSol(null); }}>
+              onChange={e => { setFilterBrand(e.target.value); setFilterPitch(""); setSolutions(null); setChosenSol(null); }}>
               <option value="">Toutes les marques</option>
               {brands.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
             <select className="mixer-select" style={{width:"auto"}} value={filterPitch}
-              onChange={e => { setFilterPitch(e.target.value); setSelectedRefs(new Set()); setSolutions(null); setChosenSol(null); }}>
+              onChange={e => { setFilterPitch(e.target.value); setSolutions(null); setChosenSol(null); }}>
               <option value="">Tous les pitches</option>
               {pitches.map(p => <option key={p} value={p}>{p} mm</option>)}
             </select>
-            {visiblePanels.length > 0 && (
-              <button style={{padding:"8px 14px",borderRadius:8,border:"1.5px solid rgba(0,0,0,.14)",background:"white",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}} onClick={toggleAll}>
-                {visiblePanels.every(p => selectedRefs.has(p.panel_ref)) ? "Désélectionner tout" : "Tout sélectionner"}
-              </button>
-            )}
           </div>
           {loading ? (
-            <div style={{color:"#aeaeb2",fontSize:13,padding:"16px 0"}}>Chargement des panneaux…</div>
-          ) : visiblePanels.length === 0 ? (
-            <div style={{color:"#aeaeb2",fontSize:13,padding:"16px 0"}}>Aucun panneau — importez d'abord votre catalogue via Admin</div>
+            <div style={{color:"#aeaeb2",fontSize:13}}>Chargement…</div>
+          ) : activePanels.length === 0 ? (
+            <div style={{color:"#ff3b30",fontSize:13,fontWeight:600}}>Aucun panneau trouvé — importez votre catalogue via l'Admin</div>
           ) : (
-            <div className="mixer-panels-grid">
-              {visiblePanels.map(p => (
-                <div key={p.panel_ref} className={`mixer-panel-chip ${selectedRefs.has(p.panel_ref) ? "selected" : ""}`} onClick={() => togglePanel(p.panel_ref)}>
-                  <div className="chip-dot" />
-                  <div>
-                    <div className="chip-label">{p.panel_ref}</div>
-                    <div className="chip-sub">{p.marque || "—"} · {p.pixel_pitch_mm}mm</div>
-                    <div className="chip-dim">{Math.round(p.panel_width_m*1000)}×{Math.round(p.panel_height_m*1000)} mm</div>
-                  </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:4}}>
+              {activePanels.map(p => (
+                <div key={p.panel_ref} style={{
+                  display:"flex",alignItems:"center",gap:7,padding:"6px 12px",
+                  borderRadius:20,background:"rgba(0,113,227,.08)",border:"1.5px solid rgba(0,113,227,.25)",
+                }}>
+                  <div style={{width:7,height:7,borderRadius:"50%",background:"#0071e3",flexShrink:0}} />
+                  <span style={{fontSize:12,fontWeight:700,color:"#0071e3"}}>{p.panel_ref}</span>
+                  <span style={{fontSize:11,color:"#6e6e73"}}>{Math.round(p.panel_width_m*1000)}×{Math.round(p.panel_height_m*1000)} mm</span>
                 </div>
               ))}
             </div>
@@ -495,11 +483,11 @@ export default function PanelMixer({ onBack }) {
               </button>
             </div>
           </div>
-          {selectedRefs.size > 0 && (
+          {activePanels.length > 0 && (
             <div style={{marginTop:12,fontSize:12,color:"#6e6e73",padding:"10px 14px",background:"#f5f5f7",borderRadius:8}}>
-              <b>{selectedRefs.size} panneau{selectedRefs.size > 1 ? "x" : ""} sélectionné{selectedRefs.size > 1 ? "s" : ""}</b> ·
-              Largeurs disponibles : {[...new Set(allPanels.filter(p => selectedRefs.has(p.panel_ref)).map(p => Math.round(p.panel_width_m * 1000)))].sort((a,b)=>a-b).map(w=>`${w}mm`).join(", ")} ·
-              Hauteurs disponibles : {[...new Set(allPanels.filter(p => selectedRefs.has(p.panel_ref)).map(p => Math.round(p.panel_height_m * 1000)))].sort((a,b)=>a-b).map(h=>`${h}mm`).join(", ")}
+              <b>{activePanels.length} panneau{activePanels.length > 1 ? "x" : ""} disponible{activePanels.length > 1 ? "s" : ""}</b> ·
+              Largeurs : {[...new Set(activePanels.map(p => Math.round(p.panel_width_m * 1000)))].sort((a,b)=>a-b).map(w=>`${w}mm`).join(", ")} ·
+              Hauteurs : {[...new Set(activePanels.map(p => Math.round(p.panel_height_m * 1000)))].sort((a,b)=>a-b).map(h=>`${h}mm`).join(", ")}
             </div>
           )}
         </div>
