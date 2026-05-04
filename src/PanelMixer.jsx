@@ -239,11 +239,12 @@ const css = `
   .mixer-label { font-size:13px; font-weight:600; color:#1d1d1f; }
   .mixer-label-hint { font-size:11px; color:#aeaeb2; font-weight:400; margin-left:4px; }
   .mixer-input-wrap { position:relative; }
-  .mixer-input { width:100%; padding:10px 40px 10px 12px; border-radius:8px; border:1.5px solid rgba(0,0,0,.16); font-size:16px; font-family:inherit; color:#1d1d1f; outline:none; transition:border-color .15s,box-shadow .15s; box-sizing:border-box; }
-  .mixer-input:focus { border-color:#0071e3; box-shadow:0 0 0 3px rgba(0,113,227,.12); }
-  .mixer-input-unit { position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:13px; font-weight:700; color:#aeaeb2; pointer-events:none; }
+  .mixer-input { width:100%; padding:10px 40px 10px 12px; border-radius:8px; border:1.5px solid #d1d1d6; font-size:16px; font-family:inherit; color:#1d1d1f; background:#ffffff; outline:none; transition:border-color .15s,box-shadow .15s; box-sizing:border-box; -webkit-appearance:none; appearance:none; }
+  .mixer-input::placeholder { color:#b0b0b8; }
+  .mixer-input:focus { border-color:#0071e3; box-shadow:0 0 0 3px rgba(0,113,227,.12); background:#ffffff; }
+  .mixer-input-unit { position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:14px; font-weight:700; color:#0071e3; pointer-events:none; }
   .mixer-input-hint { font-size:11px; color:#aeaeb2; margin-top:4px; }
-  .mixer-select { padding:10px 12px; border-radius:8px; border:1.5px solid rgba(0,0,0,.16); font-size:14px; font-family:inherit; color:#1d1d1f; outline:none; background:white; width:100%; }
+  .mixer-select { padding:10px 12px; border-radius:8px; border:1.5px solid #d1d1d6; font-size:14px; font-family:inherit; color:#1d1d1f; outline:none; background:#ffffff; width:100%; -webkit-appearance:none; appearance:none; }
   .mixer-btn-solve { padding:11px 24px; border-radius:10px; border:none; background:linear-gradient(145deg,#0071e3,#40b0ff); color:white; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; height:44px; }
   .mixer-btn-solve:disabled { opacity:.45; cursor:not-allowed; }
 
