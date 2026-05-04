@@ -90,15 +90,24 @@ function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
       });
     }
   }
-  // Portrait score: sum of (height/width) per panel — higher = more vertical panels
-  const portraitScore = sol => sol.layout.reduce((s, t) => s + (t.hMm / t.wMm) * t.count, 0);
+  // Average portrait ratio per panel (height/width). Portrait = ratio > 1. Landscape = ratio < 1.
+  const avgPortrait = sol =>
+    sol.layout.reduce((s, t) => s + (t.hMm / t.wMm) * t.count, 0) / sol.totalPanels;
+
+  // Count panels with height strictly > width (true portrait)
+  const portraitCount = sol =>
+    sol.layout.reduce((s, t) => s + (t.hMm > t.wMm ? t.count : 0), 0);
 
   return solutions
     .sort((a, b) => {
       if (a.waste !== b.waste) return a.waste - b.waste;
+      // Portrait panels FIRST — primary criterion after waste
+      const pa = avgPortrait(a), pb = avgPortrait(b);
+      if (Math.abs(pa - pb) > 0.01) return pb - pa;
+      // Then fewest total panels
       if (a.totalPanels !== b.totalPanels) return a.totalPanels - b.totalPanels;
-      // Same panel count → prefer taller panels (higher portrait score)
-      return portraitScore(b) - portraitScore(a);
+      // Then most portrait panels (h > w)
+      return portraitCount(b) - portraitCount(a);
     })
     .slice(0, 8);
 }
