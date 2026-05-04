@@ -46,70 +46,71 @@ function findCombinations(sizesMm, targetMm, toleranceMm = 50) {
 }
 
 function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
-  const widths  = [...new Set(panels.map(p => roundMm(p.panel_width_m)))];
-  const heights = [...new Set(panels.map(p => roundMm(p.panel_height_m)))];
-  const widthCombos  = findCombinations(widths,  targetW_mm, toleranceMm).slice(0, 20);
-  const heightCombos = findCombinations(heights, targetH_mm, toleranceMm).slice(0, 20);
-  const solutions = [];
+  function buildSolutions(pList) {
+    const widths  = [...new Set(pList.map(p => roundMm(p.panel_width_m)))];
+    const heights = [...new Set(pList.map(p => roundMm(p.panel_height_m)))];
+    const widthCombos  = findCombinations(widths,  targetW_mm, toleranceMm).slice(0, 20);
+    const heightCombos = findCombinations(heights, targetH_mm, toleranceMm).slice(0, 20);
+    const sols = [];
 
-  for (const wc of widthCombos) {
-    for (const hc of heightCombos) {
-      const layout = [];
-      let valid = true;
-      for (const [ws, wn] of Object.entries(wc.combo)) {
-        for (const [hs, hn] of Object.entries(hc.combo)) {
-          const wMm = parseInt(ws), hMm = parseInt(hs);
-          const panel = panels.find(p => roundMm(p.panel_width_m) === wMm && roundMm(p.panel_height_m) === hMm);
-          if (!panel) { valid = false; break; }
-          layout.push({ panel, cols: parseInt(wn), rows: parseInt(hn), count: parseInt(wn) * parseInt(hn), wMm, hMm });
+    for (const wc of widthCombos) {
+      for (const hc of heightCombos) {
+        const layout = [];
+        let valid = true;
+        for (const [ws, wn] of Object.entries(wc.combo)) {
+          for (const [hs, hn] of Object.entries(hc.combo)) {
+            const wMm = parseInt(ws), hMm = parseInt(hs);
+            const panel = pList.find(p => roundMm(p.panel_width_m) === wMm && roundMm(p.panel_height_m) === hMm);
+            if (!panel) { valid = false; break; }
+            layout.push({ panel, cols: parseInt(wn), rows: parseInt(hn), count: parseInt(wn) * parseInt(hn), wMm, hMm });
+          }
+          if (!valid) break;
         }
-        if (!valid) break;
+        if (!valid || layout.length === 0) continue;
+
+        const totalPanels   = layout.reduce((s, t) => s + t.count, 0);
+        const totalWeight   = layout.reduce((s, t) => s + t.count * (t.panel.weight_kgs || 0), 0);
+        const totalPowerMax = layout.reduce((s, t) => s + t.count * (t.panel.power_max_w || 0), 0);
+        const totalPowerAvg = layout.reduce((s, t) => s + t.count * (t.panel.power_avg_w || 0), 0);
+        const totalPixW = Object.entries(wc.combo).reduce((s, [ws, wn]) => {
+          const p = pList.find(p => roundMm(p.panel_width_m) === parseInt(ws));
+          return s + (p ? p.resolution_w * parseInt(wn) : 0);
+        }, 0);
+        const totalPixH = Object.entries(hc.combo).reduce((s, [hs, hn]) => {
+          const p = pList.find(p => roundMm(p.panel_height_m) === parseInt(hs));
+          return s + (p ? p.resolution_h * parseInt(hn) : 0);
+        }, 0);
+
+        sols.push({
+          wc, hc, layout, totalPanels, totalWeight, totalPowerMax, totalPowerAvg,
+          totalPixW, totalPixH,
+          actualW: targetW_mm - wc.waste,
+          actualH: targetH_mm - hc.waste,
+          waste: wc.waste + hc.waste,
+          types: layout.length,
+        });
       }
-      if (!valid || layout.length === 0) continue;
-
-      const totalPanels   = layout.reduce((s, t) => s + t.count, 0);
-      const totalWeight   = layout.reduce((s, t) => s + t.count * (t.panel.weight_kgs || 0), 0);
-      const totalPowerMax = layout.reduce((s, t) => s + t.count * (t.panel.power_max_w || 0), 0);
-      const totalPowerAvg = layout.reduce((s, t) => s + t.count * (t.panel.power_avg_w || 0), 0);
-      const totalPixW = Object.entries(wc.combo).reduce((s, [ws, wn]) => {
-        const p = panels.find(p => roundMm(p.panel_width_m) === parseInt(ws));
-        return s + (p ? p.resolution_w * parseInt(wn) : 0);
-      }, 0);
-      const totalPixH = Object.entries(hc.combo).reduce((s, [hs, hn]) => {
-        const p = panels.find(p => roundMm(p.panel_height_m) === parseInt(hs));
-        return s + (p ? p.resolution_h * parseInt(hn) : 0);
-      }, 0);
-
-      solutions.push({
-        wc, hc, layout, totalPanels, totalWeight, totalPowerMax, totalPowerAvg,
-        totalPixW, totalPixH,
-        actualW: targetW_mm - wc.waste,
-        actualH: targetH_mm - hc.waste,
-        waste: wc.waste + hc.waste,
-        types: layout.length,
-      });
     }
+    return sols;
   }
-  // Average portrait ratio per panel (height/width). Portrait = ratio > 1. Landscape = ratio < 1.
-  const avgPortrait = sol =>
-    sol.layout.reduce((s, t) => s + (t.hMm / t.wMm) * t.count, 0) / sol.totalPanels;
 
-  // Count panels with height strictly > width (true portrait)
-  const portraitCount = sol =>
-    sol.layout.reduce((s, t) => s + (t.hMm > t.wMm ? t.count : 0), 0);
+  const solKey = sol =>
+    sol.layout.map(t => `${t.wMm}x${t.hMm}:${t.cols}x${t.rows}`).sort().join("|");
 
-  return solutions
-    .sort((a, b) => {
-      if (a.waste !== b.waste) return a.waste - b.waste;
-      // Portrait panels FIRST — primary criterion after waste
-      const pa = avgPortrait(a), pb = avgPortrait(b);
-      if (Math.abs(pa - pb) > 0.01) return pb - pa;
-      // Then fewest total panels
-      if (a.totalPanels !== b.totalPanels) return a.totalPanels - b.totalPanels;
-      // Then most portrait panels (h > w)
-      return portraitCount(b) - portraitCount(a);
-    })
-    .slice(0, 8);
+  const sortGroup = arr =>
+    arr.sort((a, b) => a.waste !== b.waste ? a.waste - b.waste : a.totalPanels - b.totalPanels);
+
+  // Phase 1: solutions avec uniquement des panneaux portrait (hauteur > largeur)
+  const portraitPanels = panels.filter(p => roundMm(p.panel_height_m) > roundMm(p.panel_width_m));
+  const portraitSols = portraitPanels.length > 0 ? buildSolutions(portraitPanels) : [];
+  const portraitKeys = new Set(portraitSols.map(solKey));
+
+  // Phase 2: toutes les solutions (pour compléter si moins de 8 résultats portrait)
+  const allSols = buildSolutions(panels);
+  const mixedSols = allSols.filter(s => !portraitKeys.has(solKey(s)));
+
+  // Portrait en premier, mixte ensuite — chaque groupe trié par déchets puis nb panneaux
+  return [...sortGroup(portraitSols), ...sortGroup(mixedSols)].slice(0, 8);
 }
 
 // ── PDF Export ─────────────────────────────────────────────────────────────
