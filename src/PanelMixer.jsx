@@ -22,7 +22,8 @@ function findCombinations(sizesMm, targetMm, toleranceMm = 50) {
         seen.add(key);
         results.push({ combo: { ...combo }, waste: remaining });
       }
-      return;
+      if (remaining === 0) return; // fit exact — impossible de faire mieux
+      // remaining > 0 : continuer la recherche pour trouver une solution à 0 déchet
     }
     if (remaining < 0 || idx >= sorted.length) return;
     const size = sorted[idx];
@@ -46,11 +47,11 @@ function findCombinations(sizesMm, targetMm, toleranceMm = 50) {
 }
 
 function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
-  function buildSolutions(pList) {
+  function buildSolutions(pList, tol = toleranceMm) {
     const widths  = [...new Set(pList.map(p => roundMm(p.panel_width_m)))];
     const heights = [...new Set(pList.map(p => roundMm(p.panel_height_m)))];
-    const widthCombos  = findCombinations(widths,  targetW_mm, toleranceMm).slice(0, 20);
-    const heightCombos = findCombinations(heights, targetH_mm, toleranceMm).slice(0, 20);
+    const widthCombos  = findCombinations(widths,  targetW_mm, tol).slice(0, 20);
+    const heightCombos = findCombinations(heights, targetH_mm, tol).slice(0, 20);
     const sols = [];
 
     for (const wc of widthCombos) {
@@ -97,20 +98,37 @@ function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
   const solKey = sol =>
     sol.layout.map(t => `${t.wMm}x${t.hMm}:${t.cols}x${t.rows}`).sort().join("|");
 
-  const sortGroup = arr =>
-    arr.sort((a, b) => a.waste !== b.waste ? a.waste - b.waste : a.totalPanels - b.totalPanels);
-
-  // Phase 1: solutions avec uniquement des panneaux portrait (hauteur > largeur)
+  // Phase 1: panneaux portrait avec tolérance étendue (au moins la plus grande dimension du
+  // panneau portrait) → garantit toujours une solution pure grands panneaux même quand la
+  // cible n'est pas un multiple exact de leurs dimensions
   const portraitPanels = panels.filter(p => roundMm(p.panel_height_m) > roundMm(p.panel_width_m));
-  const portraitSols = portraitPanels.length > 0 ? buildSolutions(portraitPanels) : [];
+  let portraitSols = [];
+  if (portraitPanels.length > 0) {
+    const maxPortraitDim = Math.max(
+      ...portraitPanels.flatMap(p => [roundMm(p.panel_width_m), roundMm(p.panel_height_m)])
+    );
+    const portraitTol = Math.max(toleranceMm, maxPortraitDim);
+    portraitSols = buildSolutions(portraitPanels, portraitTol);
+  }
+  // Trier portrait : déchet d'abord (solution exacte prioritaire), puis nb panneaux
+  // (moins = grands panneaux), puis nb de types
+  const sortPortrait = arr =>
+    arr.sort((a, b) =>
+      a.waste !== b.waste ? a.waste - b.waste :
+      a.totalPanels !== b.totalPanels ? a.totalPanels - b.totalPanels :
+      a.types - b.types
+    );
+
   const portraitKeys = new Set(portraitSols.map(solKey));
 
-  // Phase 2: toutes les solutions (pour compléter si moins de 8 résultats portrait)
+  // Phase 2: toutes les solutions avec la tolérance normale (pour compléter si < 8 résultats)
   const allSols = buildSolutions(panels);
   const mixedSols = allSols.filter(s => !portraitKeys.has(solKey(s)));
+  const sortMixed = arr =>
+    arr.sort((a, b) => a.waste !== b.waste ? a.waste - b.waste : a.totalPanels - b.totalPanels);
 
-  // Portrait en premier, mixte ensuite — chaque groupe trié par déchets puis nb panneaux
-  return [...sortGroup(portraitSols), ...sortGroup(mixedSols)].slice(0, 8);
+  // Portrait toujours en premier (grands panneaux), mixte ensuite
+  return [...sortPortrait(portraitSols), ...sortMixed(mixedSols)].slice(0, 8);
 }
 
 // ── PDF Export ─────────────────────────────────────────────────────────────
