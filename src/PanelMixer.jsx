@@ -110,10 +110,12 @@ function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
     const portraitTol = Math.max(toleranceMm, maxPortraitDim);
     portraitSols = buildSolutions(portraitPanels, portraitTol);
   }
-  // Trier portrait : déchet d'abord (solution exacte prioritaire), puis nb panneaux
-  // (moins = grands panneaux), puis nb de types
+  // Trier portrait : priorité à la plus grande aire de panneau (500x1000 > 250x1000 > ...),
+  // puis déchet (moins = mieux), puis nb de panneaux
+  const maxArea = sol => Math.max(...sol.layout.map(t => t.wMm * t.hMm));
   const sortPortrait = arr =>
     arr.sort((a, b) =>
+      maxArea(a) !== maxArea(b) ? maxArea(b) - maxArea(a) :
       a.waste !== b.waste ? a.waste - b.waste :
       a.totalPanels !== b.totalPanels ? a.totalPanels - b.totalPanels :
       a.types - b.types
