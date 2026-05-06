@@ -110,27 +110,25 @@ function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
     const portraitTol = Math.max(toleranceMm, maxPortraitDim);
     portraitSols = buildSolutions(portraitPanels, portraitTol);
   }
-  // Trier portrait : priorité à la plus grande aire de panneau (500x1000 > 250x1000 > ...),
-  // puis déchet (moins = mieux), puis nb de panneaux
+  const portraitKeys = new Set(portraitSols.map(solKey));
+
+  // Phase 2: toutes les solutions avec la tolérance normale
+  const allSols = buildSolutions(panels);
+  const mixedSols = allSols.filter(s => !portraitKeys.has(solKey(s)));
+
+  // Tri unifié : plus grande aire de panneau d'abord (favorise les grands panneaux),
+  // puis déchet croissant, puis nb de panneaux croissant.
+  // Cela permet à une solution mixte 0-déchet (grands + petits panneaux) de passer avant
+  // une solution portrait-only avec du déchet — tout en gardant les grands panneaux en tête.
   const maxArea = sol => Math.max(...sol.layout.map(t => t.wMm * t.hMm));
-  const sortPortrait = arr =>
-    arr.sort((a, b) =>
+  return [...portraitSols, ...mixedSols]
+    .sort((a, b) =>
       maxArea(a) !== maxArea(b) ? maxArea(b) - maxArea(a) :
       a.waste !== b.waste ? a.waste - b.waste :
       a.totalPanels !== b.totalPanels ? a.totalPanels - b.totalPanels :
       a.types - b.types
-    );
-
-  const portraitKeys = new Set(portraitSols.map(solKey));
-
-  // Phase 2: toutes les solutions avec la tolérance normale (pour compléter si < 8 résultats)
-  const allSols = buildSolutions(panels);
-  const mixedSols = allSols.filter(s => !portraitKeys.has(solKey(s)));
-  const sortMixed = arr =>
-    arr.sort((a, b) => a.waste !== b.waste ? a.waste - b.waste : a.totalPanels - b.totalPanels);
-
-  // Portrait toujours en premier (grands panneaux), mixte ensuite
-  return [...sortPortrait(portraitSols), ...sortMixed(mixedSols)].slice(0, 8);
+    )
+    .slice(0, 8);
 }
 
 // ── PDF Export ─────────────────────────────────────────────────────────────

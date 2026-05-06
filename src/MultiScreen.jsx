@@ -77,16 +77,18 @@ function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
     const maxPortraitDim = Math.max(...portraitPanels.flatMap(p => [roundMm(p.panel_width_m), roundMm(p.panel_height_m)]));
     portraitSols = buildSolutions(portraitPanels, Math.max(toleranceMm, maxPortraitDim));
   }
-  const maxArea = sol => Math.max(...sol.layout.map(t => t.wMm * t.hMm));
-  const sortPortrait = arr => arr.sort((a, b) =>
-    maxArea(a) !== maxArea(b) ? maxArea(b) - maxArea(a) :
-    a.waste !== b.waste ? a.waste - b.waste :
-    a.totalPanels !== b.totalPanels ? a.totalPanels - b.totalPanels : a.types - b.types);
   const portraitKeys = new Set(portraitSols.map(solKey));
   const allSols = buildSolutions(panels);
   const mixedSols = allSols.filter(s => !portraitKeys.has(solKey(s)));
-  const sortMixed = arr => arr.sort((a, b) => a.waste !== b.waste ? a.waste - b.waste : a.totalPanels - b.totalPanels);
-  return [...sortPortrait(portraitSols), ...sortMixed(mixedSols)].slice(0, 8);
+  const maxArea = sol => Math.max(...sol.layout.map(t => t.wMm * t.hMm));
+  return [...portraitSols, ...mixedSols]
+    .sort((a, b) =>
+      maxArea(a) !== maxArea(b) ? maxArea(b) - maxArea(a) :
+      a.waste !== b.waste ? a.waste - b.waste :
+      a.totalPanels !== b.totalPanels ? a.totalPanels - b.totalPanels :
+      a.types - b.types
+    )
+    .slice(0, 8);
 }
 
 // ── PDF Export ──────────────────────────────────────────────────────────────
