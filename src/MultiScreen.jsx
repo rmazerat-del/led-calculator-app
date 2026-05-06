@@ -688,11 +688,14 @@ export default function MultiScreen({ onBack }) {
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button className="ms-btn-add" onClick={addScreen}>+ Ajouter un écran</button>
-          {solvedScreens.length > 0 && (
-            <button className="ms-btn-pdf" onClick={() => exportMultiScreenPDF(screens)}>
-              ⬇ Exporter PDF
-            </button>
-          )}
+          <button
+            className="ms-btn-pdf"
+            onClick={() => exportMultiScreenPDF(screens)}
+            disabled={solvedScreens.length === 0}
+            style={{ opacity: solvedScreens.length === 0 ? 0.38 : 1, cursor: solvedScreens.length === 0 ? "not-allowed" : "pointer" }}
+          >
+            ⬇ Exporter PDF
+          </button>
         </div>
       </div>
 
