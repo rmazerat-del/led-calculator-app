@@ -91,6 +91,46 @@ function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
     .slice(0, 8);
 }
 
+// ── Diagram helpers ─────────────────────────────────────────────────────────
+
+function buildDiagramItems(solved) {
+  const DIAG_H = 220, PAD = 20, GAP = 22;
+  const maxH = Math.max(...solved.map(s => s.solution.actualH));
+  const scale = (DIAG_H - PAD * 2) / maxH;
+  let xCursor = PAD;
+  const items = solved.map((s, i) => {
+    const sol = s.solution;
+    const w = Math.max(sol.actualW * scale, 50);
+    const h = sol.actualH * scale;
+    const x = xCursor;
+    const y = PAD + (DIAG_H - PAD * 2 - h);
+    xCursor += w + GAP;
+    return { x, y, w, h, name: s.name, i, sol };
+  });
+  return { items, totalW: xCursor - GAP + PAD, totalH: DIAG_H };
+}
+
+function generateDiagramSVG(solved) {
+  const { items, totalW, totalH } = buildDiagramItems(solved);
+  const C = ["#0071e3","#34c759","#ff9500","#af52de","#ff3b30","#00b4d8","#f72585"];
+  const els = items.map(({ x, y, w, h, name, i, sol }) => {
+    const color = C[i % C.length];
+    const fs = Math.min(14, Math.max(8, w / 8));
+    const fsS = Math.min(11, Math.max(7, w / 12));
+    const midY = y + h / 2;
+    const label = name.length > 14 ? name.slice(0, 12) + '…' : name;
+    const dims = `${(sol.actualW/1000).toFixed(2)}×${(sol.actualH/1000).toFixed(2)} m`;
+    return [
+      `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${color}" fill-opacity="0.13" stroke="${color}" stroke-width="2" rx="3"/>`,
+      `<circle cx="${x+14}" cy="${y+14}" r="10" fill="${color}"/>`,
+      `<text x="${x+14}" y="${y+18}" text-anchor="middle" fill="white" font-size="10" font-weight="800" font-family="Arial,sans-serif">${i+1}</text>`,
+      w > 60 ? `<text x="${x+w/2}" y="${midY - fsS/2}" text-anchor="middle" fill="${color}" font-size="${fs}" font-weight="700" font-family="Arial,sans-serif">${label}</text>` : '',
+      w > 44 && h > 40 ? `<text x="${x+w/2}" y="${midY + fs*0.85}" text-anchor="middle" fill="#555" font-size="${fsS}" font-family="Arial,sans-serif">${dims}</text>` : '',
+    ].join('');
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="100%" preserveAspectRatio="xMidYMid meet">${els}</svg>`;
+}
+
 // ── PDF Export ──────────────────────────────────────────────────────────────
 
 function exportMultiScreenPDF(screens) {
@@ -179,6 +219,10 @@ ${screenSections.join("\n")}
     <div class="spec-box"><div class="spec-label">Panneaux total</div><div class="spec-val" style="color:#0071e3">${totalPanels}</div></div>
     <div class="spec-box"><div class="spec-label">Poids total</div><div class="spec-val">${totalWeight.toFixed(1)} kg</div></div>
     <div class="spec-box"><div class="spec-label">Conso max totale</div><div class="spec-val">${(totalPowerMax/1000).toFixed(2)} kW</div><div class="spec-sub">Moy : ${(totalPowerAvg/1000).toFixed(2)} kW</div></div>
+  </div>
+  <h3>Représentation à l'échelle</h3>
+  <div style="background:#f9f9fb;border-radius:8px;padding:16px 16px 8px;margin-bottom:16px;border:1px solid #e0e0e0">
+    ${generateDiagramSVG(solved)}
   </div>
   <h3>Récapitulatif par écran</h3>
   <table>
@@ -315,6 +359,45 @@ const makeScreen = (n) => ({
   solving: false,
   noSolution: false,
 });
+
+// ── InstallationDiagram sub-component ───────────────────────────────────────
+
+function InstallationDiagram({ solvedScreens }) {
+  if (!solvedScreens.length) return null;
+  const { items, totalW, totalH } = buildDiagramItems(solvedScreens);
+  return (
+    <div style={{ background: '#f9f9fb', borderRadius: 10, padding: '16px 16px 8px', marginBottom: 24, border: '1px solid rgba(0,0,0,.06)' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#aeaeb2', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 10 }}>
+        Représentation à l'échelle
+      </div>
+      <svg viewBox={`0 0 ${totalW} ${totalH}`} width="100%" style={{ display: 'block', overflow: 'visible' }}>
+        {items.map(({ x, y, w, h, name, i, sol }) => {
+          const color = COLORS[i % COLORS.length];
+          const fs = Math.min(14, Math.max(8, w / 8));
+          const fsS = Math.min(11, Math.max(7, w / 12));
+          const midY = y + h / 2;
+          return (
+            <g key={i}>
+              <rect x={x} y={y} width={w} height={h} fill={color} fillOpacity={0.13} stroke={color} strokeWidth={2} rx={3} />
+              <circle cx={x + 14} cy={y + 14} r={10} fill={color} />
+              <text x={x + 14} y={y + 18} textAnchor="middle" fill="white" fontSize={10} fontWeight={800} fontFamily="Arial,sans-serif">{i + 1}</text>
+              {w > 60 && (
+                <text x={x + w / 2} y={midY - fsS / 2} textAnchor="middle" fill={color} fontSize={fs} fontWeight={700} fontFamily="Arial,sans-serif">
+                  {name.length > 14 ? name.slice(0, 12) + '…' : name}
+                </text>
+              )}
+              {w > 44 && h > 40 && (
+                <text x={x + w / 2} y={midY + fs * 0.85} textAnchor="middle" fill="#6e6e73" fontSize={fsS} fontFamily="Arial,sans-serif">
+                  {(sol.actualW / 1000).toFixed(2)} × {(sol.actualH / 1000).toFixed(2)} m
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
 
 // ── ScreenSolution sub-component ────────────────────────────────────────────
 
@@ -607,6 +690,8 @@ export default function MultiScreen({ onBack }) {
                 </div>
               ))}
             </div>
+
+            <InstallationDiagram solvedScreens={solvedScreens} />
 
             <div style={{ overflowX: "auto" }}>
               <table className="ms-synth-table">
