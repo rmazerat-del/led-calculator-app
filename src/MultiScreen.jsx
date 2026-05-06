@@ -152,122 +152,154 @@ function generateDiagramSVG(solved) {
 
 // ── PDF Export ──────────────────────────────────────────────────────────────
 
-function exportMultiScreenPDF(screens) {
+async function exportMultiScreenPDF(screens) {
   const date = new Date().toLocaleDateString("fr-FR");
   const solved = screens
     .filter(s => s.solutions?.length > 0)
     .map(s => ({ ...s, solution: s.solutions[s.chosenSolIdx] }));
+  if (!solved.length) return;
 
-  const screenSections = solved.map((s, idx) => {
-    const sol = s.solution;
-    const rows = sol.layout.map(t => `
-      <tr>
-        <td>${t.panel.panel_ref}</td><td>${t.panel.marque || "—"}</td>
-        <td>${t.panel.pixel_pitch_mm} mm</td><td>${t.wMm}×${t.hMm} mm</td>
-        <td>${t.cols} col. × ${t.rows} rang${t.rows > 1 ? "s" : ""}</td>
-        <td style="font-weight:700;color:#0071e3">${t.count}</td>
-        <td>${(t.count * (t.panel.weight_kgs || 0)).toFixed(1)} kg</td>
-        <td>${(t.count * (t.panel.power_max_w || 0)).toFixed(0)} W</td>
-      </tr>`).join("");
-    return `<div class="${idx > 0 ? "page-break" : ""}">
-      <h2>Écran ${idx + 1} — ${s.name}</h2>
-      <p class="sub">Cible : <b>${parseFloat(s.targetW).toFixed(3)} m × ${parseFloat(s.targetH).toFixed(3)} m</b>
-        &nbsp;·&nbsp; Réel : <b>${(sol.actualW/1000).toFixed(3)} m × ${(sol.actualH/1000).toFixed(3)} m</b>
-        &nbsp;·&nbsp; <span class="badge ${sol.waste === 0 ? "badge-ok" : "badge-tol"}">${sol.waste === 0 ? "✓ Ajustement parfait" : `±${sol.waste}mm d'écart`}</span></p>
-      <div class="specs-grid">
-        <div class="spec-box"><div class="spec-label">Panneaux</div><div class="spec-val">${sol.totalPanels}</div><div class="spec-sub">${sol.types} type${sol.types > 1 ? "s" : ""}</div></div>
-        <div class="spec-box"><div class="spec-label">Résolution</div><div class="spec-val">${sol.totalPixW}×${sol.totalPixH}</div><div class="spec-sub">${((sol.totalPixW * sol.totalPixH)/1e6).toFixed(1)} Mpx</div></div>
-        <div class="spec-box"><div class="spec-label">Poids</div><div class="spec-val">${sol.totalWeight.toFixed(1)} kg</div></div>
-        <div class="spec-box"><div class="spec-label">Conso max</div><div class="spec-val">${(sol.totalPowerMax/1000).toFixed(2)} kW</div><div class="spec-sub">Moy : ${(sol.totalPowerAvg/1000).toFixed(2)} kW</div></div>
-      </div>
-      <h3>Détail des panneaux</h3>
-      <table><thead><tr><th>Référence</th><th>Marque</th><th>Pitch</th><th>Dimensions</th><th>Disposition</th><th>Qté</th><th>Poids</th><th>Conso max</th></tr></thead>
-      <tbody>${rows}</tbody></table>
-    </div>`;
-  });
+  const T = (s) => `padding:7px 8px;border-bottom:1px solid #e0e0e0;${s||""}`;
+  const TH = (s) => `background:#f0f0f0;padding:6px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;border-bottom:2px solid #ccc;${s||""}`;
+  const BOX = (label, val, sub) => `<div style="border:1px solid #ccc;border-radius:5px;padding:10px;flex:1">
+    <div style="font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${label}</div>
+    <div style="font-size:17px;font-weight:700">${val}</div>
+    ${sub ? `<div style="font-size:9px;color:#888">${sub}</div>` : ""}
+  </div>`;
+  const H2 = `font-size:16px;font-weight:700;margin:0 0 10px;border-bottom:2px solid #000;padding-bottom:4px;`;
+  const H3 = `font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin:16px 0 8px;border-bottom:1px solid #ccc;padding-bottom:3px;`;
 
   const totalPanels   = solved.reduce((s, sc) => s + sc.solution.totalPanels, 0);
   const totalWeight   = solved.reduce((s, sc) => s + sc.solution.totalWeight, 0);
   const totalPowerMax = solved.reduce((s, sc) => s + sc.solution.totalPowerMax, 0);
   const totalPowerAvg = solved.reduce((s, sc) => s + sc.solution.totalPowerAvg, 0);
 
+  const screenSections = solved.map((s, idx) => {
+    const sol = s.solution;
+    const badgeStyle = sol.waste === 0
+      ? "background:#d4edda;color:#155724"
+      : "background:#fff3cd;color:#856404";
+    const rows = sol.layout.map(t => `<tr>
+      <td style="${T()}">${t.panel.panel_ref}</td>
+      <td style="${T()}">${t.panel.marque||"—"}</td>
+      <td style="${T()}">${t.panel.pixel_pitch_mm} mm</td>
+      <td style="${T()}">${t.wMm}×${t.hMm} mm</td>
+      <td style="${T()}">${t.cols} col. × ${t.rows} rang${t.rows>1?"s":""}</td>
+      <td style="${T("font-weight:700;color:#0071e3")}">${t.count}</td>
+      <td style="${T()}">${(t.count*(t.panel.weight_kgs||0)).toFixed(1)} kg</td>
+      <td style="${T()}">${(t.count*(t.panel.power_max_w||0)).toFixed(0)} W</td>
+    </tr>`).join("");
+    return `<div style="${idx>0?"margin-top:36px;padding-top:20px;border-top:2px solid #ddd;":""}">
+      <h2 style="${H2}">Écran ${idx+1} — ${s.name}</h2>
+      <p style="color:#555;font-size:12px;margin:0 0 12px">
+        Cible : <b>${parseFloat(s.targetW).toFixed(3)} m × ${parseFloat(s.targetH).toFixed(3)} m</b> &nbsp;·&nbsp;
+        Réel : <b>${(sol.actualW/1000).toFixed(3)} m × ${(sol.actualH/1000).toFixed(3)} m</b> &nbsp;·&nbsp;
+        <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;${badgeStyle}">${sol.waste===0?"✓ Ajustement parfait":`±${sol.waste}mm d'écart`}</span>
+      </p>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        ${BOX("Panneaux",sol.totalPanels,`${sol.types} type${sol.types>1?"s":""}`)}
+        ${BOX("Résolution",`${sol.totalPixW}×${sol.totalPixH}`,`${((sol.totalPixW*sol.totalPixH)/1e6).toFixed(1)} Mpx`)}
+        ${BOX("Poids",`${sol.totalWeight.toFixed(1)} kg`)}
+        ${BOX("Conso max",`${(sol.totalPowerMax/1000).toFixed(2)} kW`,`Moy : ${(sol.totalPowerAvg/1000).toFixed(2)} kW`)}
+      </div>
+      <h3 style="${H3}">Détail des panneaux</h3>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:10px">
+        <thead><tr>
+          <th style="${TH()}">Référence</th><th style="${TH()}">Marque</th><th style="${TH()}">Pitch</th>
+          <th style="${TH()}">Dimensions</th><th style="${TH()}">Disposition</th>
+          <th style="${TH()}">Qté</th><th style="${TH()}">Poids</th><th style="${TH()}">Conso max</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  });
+
   const synthRows = solved.map((s, i) => {
     const sol = s.solution;
     return `<tr>
-      <td>${i + 1}</td><td><b>${s.name}</b></td>
-      <td>${parseFloat(s.targetW).toFixed(3)} × ${parseFloat(s.targetH).toFixed(3)} m</td>
-      <td>${(sol.actualW/1000).toFixed(3)} × ${(sol.actualH/1000).toFixed(3)} m</td>
-      <td style="font-weight:700;color:#0071e3">${sol.totalPanels}</td>
-      <td style="font-size:10px">${sol.layout.map(t => `<b>${t.panel.panel_ref}</b> ×${t.count}`).join("<br>")}</td>
-      <td>${sol.totalPixW}×${sol.totalPixH}</td>
-      <td>${sol.totalWeight.toFixed(1)} kg</td>
-      <td>${(sol.totalPowerMax/1000).toFixed(2)} kW</td>
-      <td>${(sol.totalPowerAvg/1000).toFixed(2)} kW</td>
+      <td style="${T()}">${i+1}</td>
+      <td style="${T()}"><b>${s.name}</b></td>
+      <td style="${T()}">${parseFloat(s.targetW).toFixed(3)} × ${parseFloat(s.targetH).toFixed(3)} m</td>
+      <td style="${T()}">${(sol.actualW/1000).toFixed(3)} × ${(sol.actualH/1000).toFixed(3)} m</td>
+      <td style="${T("font-weight:700;color:#0071e3")}">${sol.totalPanels}</td>
+      <td style="${T("font-size:10px")}">${sol.layout.map(t=>`<b>${t.panel.panel_ref}</b> ×${t.count}`).join("<br>")}</td>
+      <td style="${T()}">${sol.totalPixW}×${sol.totalPixH}</td>
+      <td style="${T()}">${sol.totalWeight.toFixed(1)} kg</td>
+      <td style="${T()}">${(sol.totalPowerMax/1000).toFixed(2)} kW</td>
+      <td style="${T()}">${(sol.totalPowerAvg/1000).toFixed(2)} kW</td>
     </tr>`;
   }).join("");
 
-  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
-<title>Installation Multi-Écrans LED</title>
-<script>window.onload=function(){window.print();}<\/script>
-<style>
-  body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:2cm}
-  h1{font-size:20px;font-weight:700;margin-bottom:4px}
-  h2{font-size:16px;font-weight:700;margin:20px 0 6px;border-bottom:2px solid #000;padding-bottom:4px}
-  h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin:14px 0 8px;border-bottom:1px solid #ccc;padding-bottom:3px}
-  .sub{color:#555;font-size:12px;margin-bottom:14px}
-  table{width:100%;border-collapse:collapse;margin-bottom:14px}
-  th{background:#f0f0f0;padding:6px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;border-bottom:2px solid #ccc}
-  td{padding:7px 8px;border-bottom:1px solid #e0e0e0}
-  tfoot td{font-weight:700;background:#f0f7ff;border-top:2px solid #0071e3}
-  .specs-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:16px}
-  .spec-box{border:1px solid #ccc;border-radius:5px;padding:10px}
-  .spec-label{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
-  .spec-val{font-size:17px;font-weight:700}
-  .spec-sub{font-size:9px;color:#888}
-  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
-  .badge-ok{background:#d4edda;color:#155724}
-  .badge-tol{background:#fff3cd;color:#856404}
-  .page-break{page-break-before:always}
-  footer{margin-top:40px;border-top:1px solid #ccc;padding-top:6px;color:#999;font-size:10px}
-</style></head><body>
-<h1>Installation Multi-Écrans LED</h1>
-<p class="sub"><b>${solved.length} écran${solved.length > 1 ? "s" : ""}</b> · Généré le ${date}</p>
-${screenSections.join("\n")}
-<div class="page-break">
-  <h2>Synthèse de l'installation</h2>
-  <div class="specs-grid">
-    <div class="spec-box"><div class="spec-label">Écrans</div><div class="spec-val">${solved.length}</div></div>
-    <div class="spec-box"><div class="spec-label">Panneaux total</div><div class="spec-val" style="color:#0071e3">${totalPanels}</div></div>
-    <div class="spec-box"><div class="spec-label">Poids total</div><div class="spec-val">${totalWeight.toFixed(1)} kg</div></div>
-    <div class="spec-box"><div class="spec-label">Conso max totale</div><div class="spec-val">${(totalPowerMax/1000).toFixed(2)} kW</div><div class="spec-sub">Moy : ${(totalPowerAvg/1000).toFixed(2)} kW</div></div>
-  </div>
-  <h3>Représentation à l'échelle</h3>
-  <div style="background:#f9f9fb;border-radius:8px;padding:16px 16px 8px;margin-bottom:16px;border:1px solid #e0e0e0">
-    ${generateDiagramSVG(solved)}
-  </div>
-  <h3>Récapitulatif par écran</h3>
-  <table>
-    <thead><tr><th>#</th><th>Écran</th><th>Dim. cible</th><th>Dim. réelle</th><th>Panneaux</th><th>Modèles</th><th>Résolution</th><th>Poids</th><th>Conso max</th><th>Conso moy.</th></tr></thead>
-    <tbody>${synthRows}</tbody>
-    <tfoot><tr>
-      <td colspan="4">TOTAL</td>
-      <td>${totalPanels}</td>
-      <td style="font-size:10px">${[...new Set(solved.flatMap(sc => sc.solution.layout.map(t => t.panel.panel_ref)))].join(", ")}</td>
-      <td>${(solved.reduce((s, sc) => s + sc.solution.totalPixW * sc.solution.totalPixH, 0) / 1e6).toFixed(1)} Mpx</td>
-      <td>${totalWeight.toFixed(1)} kg</td>
-      <td>${(totalPowerMax/1000).toFixed(2)} kW</td>
-      <td>${(totalPowerAvg/1000).toFixed(2)} kW</td>
-    </tr></tfoot>
-  </table>
-</div>
-<footer>Généré le ${date} · LED Calculator — Installation Multi-Écrans</footer>
-</body></html>`;
+  // ── Render dans un conteneur hors-écran ──
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;padding:40px;box-sizing:border-box;font-family:Arial,sans-serif;font-size:12px;color:#000;';
+  container.innerHTML = `
+    <h1 style="font-size:20px;font-weight:700;margin:0 0 4px">Installation Multi-Écrans LED</h1>
+    <p style="color:#555;font-size:12px;margin:0 0 24px"><b>${solved.length} écran${solved.length>1?"s":""}</b> · Généré le ${date}</p>
+    ${screenSections.join("")}
+    <div style="margin-top:36px;padding-top:20px;border-top:3px solid #0071e3">
+      <h2 style="${H2}">Synthèse de l'installation</h2>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        ${BOX("Écrans",solved.length)}
+        ${BOX("Panneaux total",`<span style="color:#0071e3">${totalPanels}</span>`)}
+        ${BOX("Poids total",`${totalWeight.toFixed(1)} kg`)}
+        ${BOX("Conso max totale",`${(totalPowerMax/1000).toFixed(2)} kW`,`Moy : ${(totalPowerAvg/1000).toFixed(2)} kW`)}
+      </div>
+      <h3 style="${H3}">Représentation à l'échelle</h3>
+      <div style="background:#f9f9fb;border-radius:8px;padding:16px;margin-bottom:16px;border:1px solid #e0e0e0">
+        ${generateDiagramSVG(solved)}
+      </div>
+      <h3 style="${H3}">Récapitulatif par écran</h3>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:10px">
+        <thead><tr>
+          ${["#","Écran","Dim. cible","Dim. réelle","Panneaux","Modèles","Résolution","Poids","Conso max","Conso moy."].map(h=>`<th style="${TH()}">${h}</th>`).join("")}
+        </tr></thead>
+        <tbody>${synthRows}</tbody>
+        <tfoot><tr style="font-weight:700;background:#f0f7ff">
+          <td style="padding:7px 8px;border-top:2px solid #0071e3" colspan="4">TOTAL</td>
+          <td style="padding:7px 8px;border-top:2px solid #0071e3">${totalPanels}</td>
+          <td style="padding:7px 8px;border-top:2px solid #0071e3;font-size:10px">${[...new Set(solved.flatMap(sc=>sc.solution.layout.map(t=>t.panel.panel_ref)))].join(", ")}</td>
+          <td style="padding:7px 8px;border-top:2px solid #0071e3">${(solved.reduce((s,sc)=>s+sc.solution.totalPixW*sc.solution.totalPixH,0)/1e6).toFixed(1)} Mpx</td>
+          <td style="padding:7px 8px;border-top:2px solid #0071e3">${totalWeight.toFixed(1)} kg</td>
+          <td style="padding:7px 8px;border-top:2px solid #0071e3">${(totalPowerMax/1000).toFixed(2)} kW</td>
+          <td style="padding:7px 8px;border-top:2px solid #0071e3">${(totalPowerAvg/1000).toFixed(2)} kW</td>
+        </tr></tfoot>
+      </table>
+    </div>
+    <div style="margin-top:32px;border-top:1px solid #ccc;padding-top:6px;color:#999;font-size:10px">
+      Généré le ${date} · LED Calculator — Installation Multi-Écrans
+    </div>`;
+  document.body.appendChild(container);
+  await new Promise(r => setTimeout(r, 400));
 
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const win = window.open(url, "_blank");
-  if (!win) alert("Veuillez autoriser les popups pour ce site afin d'exporter en PDF.");
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  try {
+    const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
+      import('jspdf'),
+      import('html2canvas'),
+    ]);
+    const canvas = await html2canvas(container, {
+      scale: 1.5, backgroundColor: '#ffffff', useCORS: true, allowTaint: true, logging: false,
+    });
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const A4W = 210, A4H = 297;
+    const imgH = (canvas.height / canvas.width) * A4W;
+    let top = 0, first = true;
+    while (top < imgH) {
+      if (!first) pdf.addPage();
+      first = false;
+      const sliceH = Math.min(A4H, imgH - top);
+      const srcY = Math.round((top / imgH) * canvas.height);
+      const srcH = Math.round((sliceH / imgH) * canvas.height);
+      const slice = document.createElement('canvas');
+      slice.width = canvas.width; slice.height = srcH;
+      slice.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+      pdf.addImage(slice.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, A4W, sliceH);
+      top += A4H;
+    }
+    pdf.save(`installation-multi-ecrans-${date.replace(/\//g, '-')}.pdf`);
+  } finally {
+    document.body.removeChild(container);
+  }
 }
 
 // ── Colors ──────────────────────────────────────────────────────────────────
