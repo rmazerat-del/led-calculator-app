@@ -93,7 +93,9 @@ function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
 
 function exportMultiScreenPDF(screens) {
   const date = new Date().toLocaleDateString("fr-FR");
-  const solved = screens.filter(s => s.solution);
+  const solved = screens
+    .filter(s => s.solutions?.length > 0)
+    .map(s => ({ ...s, solution: s.solutions[s.chosenSolIdx] }));
 
   const screenSections = solved.map((s, idx) => {
     const sol = s.solution;
@@ -244,6 +246,13 @@ const css = `
 
   .ms-no-sol { margin:0 20px 16px; padding:12px 16px; background:rgba(255,59,48,.06); border:1px solid rgba(255,59,48,.2); border-radius:8px; color:#ff3b30; font-size:13px; font-weight:600; }
 
+  .ms-sol-nav { display:flex; align-items:center; gap:10px; padding:10px 20px; background:#f0f0f3; border-top:1px solid rgba(0,0,0,.06); }
+  .ms-sol-nav-btn { width:32px; height:32px; border-radius:8px; border:1.5px solid rgba(0,0,0,.15); background:white; cursor:pointer; font-size:18px; font-family:inherit; display:flex; align-items:center; justify-content:center; line-height:1; transition:all .15s; }
+  .ms-sol-nav-btn:disabled { opacity:.35; cursor:not-allowed; }
+  .ms-sol-nav-btn:hover:not(:disabled) { border-color:#0071e3; color:#0071e3; background:rgba(0,113,227,.06); }
+  .ms-sol-nav-label { font-size:13px; font-weight:700; color:#1d1d1f; }
+  .ms-sol-nav-count { font-size:11px; color:#aeaeb2; margin-left:4px; }
+
   .ms-solution { border-top:1px solid rgba(0,0,0,.06); padding:16px 20px; background:#f9f9fb; }
   .ms-sol-header { display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
   .ms-waste-badge { font-size:12px; font-weight:700; padding:4px 12px; border-radius:20px; }
@@ -296,7 +305,8 @@ const makeScreen = (n) => ({
   tolerance: "0",
   filterBrand: "",
   filterPitch: "",
-  solution: null,
+  solutions: [],
+  chosenSolIdx: 0,
   solving: false,
   noSolution: false,
 });
@@ -443,7 +453,32 @@ function ScreenCard({ screen, idx, brands, allPanels, onUpdate, onSolve, onRemov
           Aucune combinaison valide — augmentez la tolérance ou ajoutez des panneaux au catalogue
         </div>
       )}
-      {screen.solution && <ScreenSolution sol={screen.solution} />}
+      {screen.solutions?.length > 0 && (() => {
+        const sol = screen.solutions[screen.chosenSolIdx];
+        return (
+          <>
+            {screen.solutions.length > 1 && (
+              <div className="ms-sol-nav">
+                <button
+                  className="ms-sol-nav-btn"
+                  disabled={screen.chosenSolIdx === 0}
+                  onClick={() => onUpdate({ chosenSolIdx: screen.chosenSolIdx - 1 })}
+                >‹</button>
+                <span className="ms-sol-nav-label">
+                  Solution {screen.chosenSolIdx + 1}
+                  <span className="ms-sol-nav-count">/ {screen.solutions.length}</span>
+                </span>
+                <button
+                  className="ms-sol-nav-btn"
+                  disabled={screen.chosenSolIdx === screen.solutions.length - 1}
+                  onClick={() => onUpdate({ chosenSolIdx: screen.chosenSolIdx + 1 })}
+                >›</button>
+              </div>
+            )}
+            <ScreenSolution sol={sol} />
+          </>
+        );
+      })()}
     </div>
   );
 }
@@ -492,11 +527,13 @@ export default function MultiScreen({ onBack }) {
         Math.round(parseFloat(screen.targetH) * 1000),
         parseInt(screen.tolerance) || 0
       );
-      update(screen.id, { solution: sols[0] || null, noSolution: sols.length === 0, solving: false });
+      update(screen.id, { solutions: sols, chosenSolIdx: 0, noSolution: sols.length === 0, solving: false });
     }, 10);
   };
 
-  const solvedScreens = screens.filter(s => s.solution);
+  const solvedScreens = screens
+    .filter(s => s.solutions?.length > 0)
+    .map(s => ({ ...s, solution: s.solutions[s.chosenSolIdx] }));
 
   return (
     <div className="ms-wrap">
