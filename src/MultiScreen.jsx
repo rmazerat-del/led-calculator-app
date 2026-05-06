@@ -183,7 +183,8 @@ ${screenSections.join("\n")}
     <tbody>${synthRows}</tbody>
     <tfoot><tr>
       <td colspan="4">TOTAL</td>
-      <td>${totalPanels}</td><td>—</td>
+      <td>${totalPanels}</td>
+      <td>${(solved.reduce((s, sc) => s + sc.solution.totalPixW * sc.solution.totalPixH, 0) / 1e6).toFixed(1)} Mpx</td>
       <td>${totalWeight.toFixed(1)} kg</td>
       <td>${(totalPowerMax/1000).toFixed(2)} kW</td>
       <td>${(totalPowerAvg/1000).toFixed(2)} kW</td>
@@ -643,7 +644,7 @@ export default function MultiScreen({ onBack }) {
                   <tr>
                     <td colSpan={4}>TOTAL</td>
                     <td>{solvedScreens.reduce((s, sc) => s + sc.solution.totalPanels, 0)}</td>
-                    <td>—</td>
+                    <td>{(solvedScreens.reduce((s, sc) => s + sc.solution.totalPixW * sc.solution.totalPixH, 0) / 1e6).toFixed(1)} Mpx</td>
                     <td>{solvedScreens.reduce((s, sc) => s + sc.solution.totalWeight, 0).toFixed(1)} kg</td>
                     <td>{(solvedScreens.reduce((s, sc) => s + sc.solution.totalPowerMax, 0) / 1000).toFixed(2)} kW</td>
                   </tr>
