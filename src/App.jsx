@@ -2,6 +2,7 @@ import { useState } from "react";
 import LEDCalculator from "./LEDCalculator";
 import AdminPanels from "./AdminPanels";
 import PanelMixer from "./PanelMixer";
+import MultiScreen from "./MultiScreen";
 
 const ADMIN_PASSWORD = "Poisson95."; // changez ceci !
 
@@ -18,6 +19,7 @@ export default function App() {
 
   if (page === "admin" && adminUnlocked) return <AdminPanels onBack={() => setPage("calculator")} />;
   if (page === "mixer") return <PanelMixer onBack={() => setPage("calculator")} />;
+  if (page === "multiscreen") return <MultiScreen onBack={() => setPage("calculator")} />;
 
-  return <LEDCalculator onAdmin={handleAdminClick} onMixer={() => setPage("mixer")} />;
+  return <LEDCalculator onAdmin={handleAdminClick} onMixer={() => setPage("mixer")} onMultiScreen={() => setPage("multiscreen")} />;
 }
