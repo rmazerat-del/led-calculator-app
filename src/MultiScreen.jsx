@@ -93,42 +93,61 @@ function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
 
 // ── Diagram helpers ─────────────────────────────────────────────────────────
 
-function buildDiagramItems(solved) {
-  const DIAG_H = 220, PAD = 20, GAP = 22;
-  const maxH = Math.max(...solved.map(s => s.solution.actualH));
-  const scale = (DIAG_H - PAD * 2) / maxH;
-  let xCursor = PAD;
-  const items = solved.map((s, i) => {
-    const sol = s.solution;
-    const w = Math.max(sol.actualW * scale, 50);
-    const h = sol.actualH * scale;
-    const x = xCursor;
-    const y = PAD + (DIAG_H - PAD * 2 - h);
-    xCursor += w + GAP;
-    return { x, y, w, h, name: s.name, i, sol };
-  });
-  return { items, totalW: xCursor - GAP + PAD, totalH: DIAG_H };
-}
-
 function generateDiagramSVG(solved) {
-  const { items, totalW, totalH } = buildDiagramItems(solved);
+  const MAX_H = 160, GAP = 28, PAD = 16, LABEL_H = 26, DIM_H = 18;
   const C = ["#0071e3","#34c759","#ff9500","#af52de","#ff3b30","#00b4d8","#f72585"];
-  const els = items.map(({ x, y, w, h, name, i, sol }) => {
-    const color = C[i % C.length];
-    const fs = Math.min(14, Math.max(8, w / 8));
-    const fsS = Math.min(11, Math.max(7, w / 12));
-    const midY = y + h / 2;
-    const label = name.length > 14 ? name.slice(0, 12) + '…' : name;
-    const dims = `${(sol.actualW/1000).toFixed(2)}×${(sol.actualH/1000).toFixed(2)} m`;
-    return [
-      `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${color}" fill-opacity="0.13" stroke="${color}" stroke-width="2" rx="3"/>`,
-      `<circle cx="${x+14}" cy="${y+14}" r="10" fill="${color}"/>`,
-      `<text x="${x+14}" y="${y+18}" text-anchor="middle" fill="white" font-size="10" font-weight="800" font-family="Arial,sans-serif">${i+1}</text>`,
-      w > 60 ? `<text x="${x+w/2}" y="${midY - fsS/2}" text-anchor="middle" fill="${color}" font-size="${fs}" font-weight="700" font-family="Arial,sans-serif">${label}</text>` : '',
-      w > 44 && h > 40 ? `<text x="${x+w/2}" y="${midY + fs*0.85}" text-anchor="middle" fill="#555" font-size="${fsS}" font-family="Arial,sans-serif">${dims}</text>` : '',
-    ].join('');
-  }).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="100%" preserveAspectRatio="xMidYMid meet">${els}</svg>`;
+  const maxH_mm = Math.max(...solved.map(s => s.solution.actualH));
+  const scale = MAX_H / maxH_mm;
+  const svgH = PAD + LABEL_H + MAX_H + DIM_H + PAD;
+  let xCursor = PAD;
+
+  const els = solved.map((s, idx) => {
+    const sol = s.solution;
+    const color = C[idx % C.length];
+    const gridW = sol.actualW * scale;
+    const gridH = sol.actualH * scale;
+    const x0 = xCursor;
+    const y0 = PAD + LABEL_H + (MAX_H - gridH);
+    xCursor += gridW + GAP;
+
+    const wSecs = Object.entries(sol.wc.combo).flatMap(([w, n]) => Array(parseInt(n)).fill(parseInt(w)));
+    const hSecs = Object.entries(sol.hc.combo).flatMap(([h, n]) => Array(parseInt(n)).fill(parseInt(h)));
+    const colorMap = {}; let ci = 0;
+    const parts = [];
+    let yOff = 0;
+    for (const hMm of hSecs) {
+      let xOff = 0;
+      for (const wMm of wSecs) {
+        const key = `${wMm}x${hMm}`;
+        if (!(key in colorMap)) colorMap[key] = C[ci++ % C.length];
+        const cc = colorMap[key];
+        const cx = (x0 + xOff * scale).toFixed(1);
+        const cy = (y0 + yOff * scale).toFixed(1);
+        const cw = (wMm * scale - 1.5).toFixed(1);
+        const ch = (hMm * scale - 1.5).toFixed(1);
+        const chN = hMm * scale - 1.5;
+        parts.push(`<rect x="${cx}" y="${cy}" width="${cw}" height="${ch}" fill="${cc}" fill-opacity="0.13" stroke="${cc}" stroke-width="1.5" rx="2"/>`);
+        if (chN > 18) {
+          const fs = Math.max(6, Math.min(9, chN * 0.14)).toFixed(1);
+          const tx = (x0 + xOff * scale + wMm * scale / 2).toFixed(1);
+          const ty = (y0 + yOff * scale + hMm * scale / 2 + parseFloat(fs) * 0.4).toFixed(1);
+          parts.push(`<text x="${tx}" y="${ty}" text-anchor="middle" fill="${cc}" font-size="${fs}" font-weight="700" font-family="Arial,sans-serif">${wMm}×${hMm}</text>`);
+        }
+        xOff += wMm;
+      }
+      yOff += hMm;
+    }
+    parts.push(`<rect x="${x0.toFixed(1)}" y="${y0.toFixed(1)}" width="${gridW.toFixed(1)}" height="${gridH.toFixed(1)}" fill="none" stroke="${color}" stroke-width="2" rx="3"/>`);
+    parts.push(`<circle cx="${(x0+11).toFixed(1)}" cy="${(PAD+13).toFixed(1)}" r="10" fill="${color}"/>`);
+    parts.push(`<text x="${(x0+11).toFixed(1)}" y="${(PAD+17).toFixed(1)}" text-anchor="middle" fill="white" font-size="10" font-weight="800" font-family="Arial,sans-serif">${idx+1}</text>`);
+    const nameText = s.name.length > 18 ? s.name.slice(0,16)+'…' : s.name;
+    parts.push(`<text x="${(x0+26).toFixed(1)}" y="${(PAD+17).toFixed(1)}" fill="${color}" font-size="11" font-weight="700" font-family="Arial,sans-serif">${nameText}</text>`);
+    parts.push(`<text x="${(x0+gridW/2).toFixed(1)}" y="${(y0+gridH+13).toFixed(1)}" text-anchor="middle" fill="#555" font-size="9" font-family="Arial,sans-serif">${(sol.actualW/1000).toFixed(2)}×${(sol.actualH/1000).toFixed(2)} m · ${sol.totalPanels} pan.</text>`);
+    return parts.join('');
+  });
+
+  const svgW = xCursor - GAP + PAD;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" width="100%" preserveAspectRatio="xMidYMid meet">${els.join('')}</svg>`;
 }
 
 // ── PDF Export ──────────────────────────────────────────────────────────────
@@ -364,37 +383,67 @@ const makeScreen = (n) => ({
 
 function InstallationDiagram({ solvedScreens }) {
   if (!solvedScreens.length) return null;
-  const { items, totalW, totalH } = buildDiagramItems(solvedScreens);
+  const MAX_H = 160;
+  const maxH_mm = Math.max(...solvedScreens.map(s => s.solution.actualH));
+  const scale = MAX_H / maxH_mm;
+
   return (
-    <div style={{ background: '#f9f9fb', borderRadius: 10, padding: '16px 16px 8px', marginBottom: 24, border: '1px solid rgba(0,0,0,.06)' }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#aeaeb2', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 10 }}>
-        Représentation à l'échelle
+    <div style={{ background: '#f9f9fb', borderRadius: 10, padding: '16px', marginBottom: 24, border: '1px solid rgba(0,0,0,.06)', overflowX: 'auto' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#aeaeb2', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 14 }}>
+        Quadrillage des panneaux — à l'échelle
       </div>
-      <svg viewBox={`0 0 ${totalW} ${totalH}`} width="100%" style={{ display: 'block', overflow: 'visible' }}>
-        {items.map(({ x, y, w, h, name, i, sol }) => {
-          const color = COLORS[i % COLORS.length];
-          const fs = Math.min(14, Math.max(8, w / 8));
-          const fsS = Math.min(11, Math.max(7, w / 12));
-          const midY = y + h / 2;
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-end', minWidth: 'min-content' }}>
+        {solvedScreens.map((s, idx) => {
+          const sol = s.solution;
+          const color = COLORS[idx % COLORS.length];
+          const gridW = sol.actualW * scale;
+          const gridH = sol.actualH * scale;
+
+          const wSecs = Object.entries(sol.wc.combo).flatMap(([w, n]) => Array(parseInt(n)).fill(parseInt(w)));
+          const hSecs = Object.entries(sol.hc.combo).flatMap(([h, n]) => Array(parseInt(n)).fill(parseInt(h)));
+          const colorMap = {}; let ci = 0;
+          const cells = [];
+          let yOff = 0;
+          for (const hMm of hSecs) {
+            let xOff = 0;
+            for (const wMm of wSecs) {
+              const key = `${wMm}x${hMm}`;
+              if (!(key in colorMap)) colorMap[key] = COLORS[ci++ % COLORS.length];
+              cells.push({ left: xOff * scale, top: yOff * scale, width: wMm * scale - 1.5, height: hMm * scale - 1.5, key, wMm, hMm });
+              xOff += wMm;
+            }
+            yOff += hMm;
+          }
+
           return (
-            <g key={i}>
-              <rect x={x} y={y} width={w} height={h} fill={color} fillOpacity={0.13} stroke={color} strokeWidth={2} rx={3} />
-              <circle cx={x + 14} cy={y + 14} r={10} fill={color} />
-              <text x={x + 14} y={y + 18} textAnchor="middle" fill="white" fontSize={10} fontWeight={800} fontFamily="Arial,sans-serif">{i + 1}</text>
-              {w > 60 && (
-                <text x={x + w / 2} y={midY - fsS / 2} textAnchor="middle" fill={color} fontSize={fs} fontWeight={700} fontFamily="Arial,sans-serif">
-                  {name.length > 14 ? name.slice(0, 12) + '…' : name}
-                </text>
-              )}
-              {w > 44 && h > 40 && (
-                <text x={x + w / 2} y={midY + fs * 0.85} textAnchor="middle" fill="#6e6e73" fontSize={fsS} fontFamily="Arial,sans-serif">
-                  {(sol.actualW / 1000).toFixed(2)} × {(sol.actualH / 1000).toFixed(2)} m
-                </text>
-              )}
-            </g>
+            <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 20, height: 20, borderRadius: '50%', background: color, color: 'white', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#1d1d1f', whiteSpace: 'nowrap' }}>{s.name}</span>
+              </div>
+              <div style={{ position: 'relative', width: gridW, height: gridH, border: `2px solid ${color}`, borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
+                {cells.map((c, j) => (
+                  <div key={j} style={{
+                    position: 'absolute', left: c.left, top: c.top, width: c.width, height: c.height,
+                    background: colorMap[c.key] + '22',
+                    border: `1.5px solid ${colorMap[c.key]}`,
+                    borderRadius: 2,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: Math.max(6, Math.min(10, c.height * 0.14)),
+                    color: colorMap[c.key], fontWeight: 700,
+                    boxSizing: 'border-box',
+                  }}>
+                    {c.height > 20 ? `${c.wMm}×${c.hMm}` : ''}
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 11, color: '#6e6e73', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                {(sol.actualW / 1000).toFixed(2)} × {(sol.actualH / 1000).toFixed(2)} m · {sol.totalPanels} pan.
+              </div>
+            </div>
           );
         })}
-      </svg>
+      </div>
     </div>
   );
 }
