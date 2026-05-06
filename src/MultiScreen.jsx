@@ -137,6 +137,7 @@ function exportMultiScreenPDF(screens) {
       <td>${parseFloat(s.targetW).toFixed(3)} × ${parseFloat(s.targetH).toFixed(3)} m</td>
       <td>${(sol.actualW/1000).toFixed(3)} × ${(sol.actualH/1000).toFixed(3)} m</td>
       <td style="font-weight:700;color:#0071e3">${sol.totalPanels}</td>
+      <td style="font-size:10px">${sol.layout.map(t => `<b>${t.panel.panel_ref}</b> ×${t.count}`).join("<br>")}</td>
       <td>${sol.totalPixW}×${sol.totalPixH}</td>
       <td>${sol.totalWeight.toFixed(1)} kg</td>
       <td>${(sol.totalPowerMax/1000).toFixed(2)} kW</td>
@@ -179,11 +180,12 @@ ${screenSections.join("\n")}
   </div>
   <h3>Récapitulatif par écran</h3>
   <table>
-    <thead><tr><th>#</th><th>Écran</th><th>Dim. cible</th><th>Dim. réelle</th><th>Panneaux</th><th>Résolution</th><th>Poids</th><th>Conso max</th><th>Conso moy.</th></tr></thead>
+    <thead><tr><th>#</th><th>Écran</th><th>Dim. cible</th><th>Dim. réelle</th><th>Panneaux</th><th>Modèles</th><th>Résolution</th><th>Poids</th><th>Conso max</th><th>Conso moy.</th></tr></thead>
     <tbody>${synthRows}</tbody>
     <tfoot><tr>
       <td colspan="4">TOTAL</td>
       <td>${totalPanels}</td>
+      <td style="font-size:10px">${[...new Set(solved.flatMap(sc => sc.solution.layout.map(t => t.panel.panel_ref)))].join(", ")}</td>
       <td>${(solved.reduce((s, sc) => s + sc.solution.totalPixW * sc.solution.totalPixH, 0) / 1e6).toFixed(1)} Mpx</td>
       <td>${totalWeight.toFixed(1)} kg</td>
       <td>${(totalPowerMax/1000).toFixed(2)} kW</td>
@@ -613,6 +615,7 @@ export default function MultiScreen({ onBack }) {
                     <th>Dim. cible</th>
                     <th>Dim. réelle</th>
                     <th>Panneaux</th>
+                    <th>Modèles utilisés</th>
                     <th>Résolution</th>
                     <th>Poids</th>
                     <th>Conso max</th>
@@ -633,6 +636,14 @@ export default function MultiScreen({ onBack }) {
                           {sol.waste > 0 && <span className="ms-badge-tol">±{sol.waste}mm</span>}
                         </td>
                         <td style={{ fontWeight: 700, color: "#0071e3" }}>{sol.totalPanels}</td>
+                        <td style={{ fontSize: 12, lineHeight: 1.5 }}>
+                          {sol.layout.map((t, i) => (
+                            <div key={i}>
+                              <b>{t.panel.panel_ref}</b>
+                              <span style={{ color: "#6e6e73" }}> ×{t.count}</span>
+                            </div>
+                          ))}
+                        </td>
                         <td>{sol.totalPixW}×{sol.totalPixH}</td>
                         <td>{sol.totalWeight.toFixed(1)} kg</td>
                         <td>{(sol.totalPowerMax/1000).toFixed(2)} kW</td>
@@ -644,6 +655,9 @@ export default function MultiScreen({ onBack }) {
                   <tr>
                     <td colSpan={4}>TOTAL</td>
                     <td>{solvedScreens.reduce((s, sc) => s + sc.solution.totalPanels, 0)}</td>
+                    <td style={{ fontSize: 11 }}>
+                      {[...new Set(solvedScreens.flatMap(sc => sc.solution.layout.map(t => t.panel.panel_ref)))].join(", ")}
+                    </td>
                     <td>{(solvedScreens.reduce((s, sc) => s + sc.solution.totalPixW * sc.solution.totalPixH, 0) / 1e6).toFixed(1)} Mpx</td>
                     <td>{solvedScreens.reduce((s, sc) => s + sc.solution.totalWeight, 0).toFixed(1)} kg</td>
                     <td>{(solvedScreens.reduce((s, sc) => s + sc.solution.totalPowerMax, 0) / 1000).toFixed(2)} kW</td>
