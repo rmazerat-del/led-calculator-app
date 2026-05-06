@@ -150,6 +150,7 @@ function exportPDF(sol, targetW, targetH) {
   const html = `<!DOCTYPE html>
 <html lang="fr"><head><meta charset="UTF-8">
 <title>Mix LED — ${(sol.actualW/1000).toFixed(3)}m × ${(sol.actualH/1000).toFixed(3)}m</title>
+<script>window.onload=function(){window.print();}<\/script>
 <style>
   body { font-family: Arial, sans-serif; font-size: 12px; color: #000; margin: 2cm; }
   h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
@@ -201,10 +202,11 @@ ${sol.layout.map(t =>
 <footer>Généré le ${date} · LED Calculator — Mix de panneaux</footer>
 </body></html>`;
 
-  const win = window.open("", "_blank");
-  win.document.write(html);
-  win.document.close();
-  win.print();
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, "_blank");
+  if (!win) alert("Veuillez autoriser les popups pour ce site afin d'exporter en PDF.");
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 // ── Visual grid ────────────────────────────────────────────────────────────

@@ -207,7 +207,9 @@ function exportMultiScreenPDF(screens) {
   }).join("");
 
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
-<title>Installation Multi-Écrans LED</title><style>
+<title>Installation Multi-Écrans LED</title>
+<script>window.onload=function(){window.print();}<\/script>
+<style>
   body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:2cm}
   h1{font-size:20px;font-weight:700;margin-bottom:4px}
   h2{font-size:16px;font-weight:700;margin:20px 0 6px;border-bottom:2px solid #000;padding-bottom:4px}
@@ -261,10 +263,11 @@ ${screenSections.join("\n")}
 <footer>Généré le ${date} · LED Calculator — Installation Multi-Écrans</footer>
 </body></html>`;
 
-  const win = window.open("", "_blank");
-  win.document.write(html);
-  win.document.close();
-  win.print();
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, "_blank");
+  if (!win) alert("Veuillez autoriser les popups pour ce site afin d'exporter en PDF.");
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 // ── Colors ──────────────────────────────────────────────────────────────────
