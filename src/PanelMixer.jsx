@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
+import { useLang, LangToggle } from "./LanguageContext";
 
 // ── Algorithm ──────────────────────────────────────────────────────────────
 
@@ -133,7 +134,7 @@ function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
 
 // ── PDF Export ─────────────────────────────────────────────────────────────
 
-async function exportPDF(sol, targetW, targetH) {
+async function exportPDF(sol, targetW, targetH, t) {
   const date = new Date().toLocaleDateString("fr-FR");
   const T  = (s) => `padding:8px 10px;border-bottom:1px solid #e0e0e0;${s||""}`;
   const TH = (s) => `background:#f0f0f0;padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #ccc;${s||""}`;
@@ -144,44 +145,44 @@ async function exportPDF(sol, targetW, targetH) {
   </div>`;
   const badgeStyle = sol.waste === 0 ? "background:#d4edda;color:#155724" : "background:#fff3cd;color:#856404";
 
-  const rows = sol.layout.map(t => `<tr>
-    <td style="${T()}">${t.panel.panel_ref}</td>
-    <td style="${T()}">${t.panel.marque||"—"}</td>
-    <td style="${T()}">${t.panel.pixel_pitch_mm} mm</td>
-    <td style="${T()}">${t.wMm}×${t.hMm} mm</td>
-    <td style="${T()}">${t.cols} col. × ${t.rows} rang${t.rows>1?"s":""}</td>
-    <td style="${T("font-weight:700;color:#0071e3")}">${t.count}</td>
-    <td style="${T()}">${(t.count*(t.panel.weight_kgs||0)).toFixed(1)} kg</td>
-    <td style="${T()}">${(t.count*(t.panel.power_max_w||0)).toFixed(0)} W</td>
+  const rows = sol.layout.map(tile => `<tr>
+    <td style="${T()}">${tile.panel.panel_ref}</td>
+    <td style="${T()}">${tile.panel.marque||"—"}</td>
+    <td style="${T()}">${tile.panel.pixel_pitch_mm} mm</td>
+    <td style="${T()}">${tile.wMm}×${tile.hMm} mm</td>
+    <td style="${T()}">${tile.cols} col. × ${tile.rows} rang${tile.rows>1?"s":""}</td>
+    <td style="${T("font-weight:700;color:#0071e3")}">${tile.count}</td>
+    <td style="${T()}">${(tile.count*(tile.panel.weight_kgs||0)).toFixed(1)} kg</td>
+    <td style="${T()}">${(tile.count*(tile.panel.power_max_w||0)).toFixed(0)} W</td>
   </tr>`).join("");
 
   const container = document.createElement('div');
   container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;padding:48px;box-sizing:border-box;font-family:Arial,sans-serif;font-size:12px;color:#000;';
   container.innerHTML = `
-    <h1 style="font-size:20px;font-weight:700;margin:0 0 6px">Fiche Mix de Panneaux LED</h1>
+    <h1 style="font-size:20px;font-weight:700;margin:0 0 6px">${t.mixPdfTitle}</h1>
     <p style="color:#555;font-size:13px;margin:0 0 20px">
-      Cible : <b>${parseFloat(targetW).toFixed(3)} m × ${parseFloat(targetH).toFixed(3)} m</b> &nbsp;·&nbsp;
-      Réel : <b>${(sol.actualW/1000).toFixed(3)} m × ${(sol.actualH/1000).toFixed(3)} m</b> &nbsp;·&nbsp;
-      <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;${badgeStyle}">${sol.waste===0?"✓ Ajustement parfait":`±${sol.waste}mm d'écart`}</span>
+      ${t.targetLabel} <b>${parseFloat(targetW).toFixed(3)} m × ${parseFloat(targetH).toFixed(3)} m</b> &nbsp;·&nbsp;
+      ${t.realLabel} <b>${(sol.actualW/1000).toFixed(3)} m × ${(sol.actualH/1000).toFixed(3)} m</b> &nbsp;·&nbsp;
+      <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;${badgeStyle}">${sol.waste===0 ? t.perfectFit : t.deviation(sol.waste)}</span>
     </p>
-    <h2 style="font-size:13px;font-weight:700;border-bottom:2px solid #000;padding-bottom:4px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.05em">Récapitulatif global</h2>
+    <h2 style="font-size:13px;font-weight:700;border-bottom:2px solid #000;padding-bottom:4px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.05em">${t.globalSummary}</h2>
     <div style="display:flex;gap:10px;margin-bottom:20px">
-      ${BOX("Panneaux total",sol.totalPanels,`${sol.types} type${sol.types>1?"s":""}`)}
-      ${BOX("Résolution",`${sol.totalPixW}×${sol.totalPixH}`,`${((sol.totalPixW*sol.totalPixH)/1e6).toFixed(1)} Mpx`)}
-      ${BOX("Poids total",`${sol.totalWeight.toFixed(1)} kg`)}
-      ${BOX("Conso. max",`${(sol.totalPowerMax/1000).toFixed(2)} kW`,`Moy : ${(sol.totalPowerAvg/1000).toFixed(2)} kW`)}
+      ${BOX(t.totalPanels, sol.totalPanels, `${sol.types} type${sol.types>1?"s":""}`)}
+      ${BOX(t.resolution, `${sol.totalPixW}×${sol.totalPixH}`, `${((sol.totalPixW*sol.totalPixH)/1e6).toFixed(1)} Mpx`)}
+      ${BOX(t.totalWeight, `${sol.totalWeight.toFixed(1)} kg`)}
+      ${BOX(t.maxPowerLabel, `${(sol.totalPowerMax/1000).toFixed(2)} kW`, `${t.avg} ${(sol.totalPowerAvg/1000).toFixed(2)} kW`)}
     </div>
-    <h2 style="font-size:13px;font-weight:700;border-bottom:2px solid #000;padding-bottom:4px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.05em">Détail des panneaux</h2>
+    <h2 style="font-size:13px;font-weight:700;border-bottom:2px solid #000;padding-bottom:4px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.05em">${t.panelDetail}</h2>
     <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
       <thead><tr>
-        <th style="${TH()}">Référence</th><th style="${TH()}">Marque</th><th style="${TH()}">Pitch</th>
-        <th style="${TH()}">Dimensions</th><th style="${TH()}">Disposition</th>
-        <th style="${TH()}">Qté</th><th style="${TH()}">Poids</th><th style="${TH()}">Conso max</th>
+        <th style="${TH()}">${t.reference}</th><th style="${TH()}">${t.brand}</th><th style="${TH()}">${t.pitch}</th>
+        <th style="${TH()}">${t.dimensions}</th><th style="${TH()}">${t.layout}</th>
+        <th style="${TH()}">${t.qty}</th><th style="${TH()}">${t.weight}</th><th style="${TH()}">${t.maxPower}</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div style="margin-top:32px;border-top:1px solid #ccc;padding-top:6px;color:#999;font-size:10px">
-      Généré le ${date} · LED Calculator — Mix de panneaux
+      ${t.mixPdfFooter(date)}
     </div>`;
   document.body.appendChild(container);
   await new Promise(r => setTimeout(r, 300));
@@ -367,6 +368,7 @@ const css = `
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function PanelMixer({ onBack }) {
+  const { t } = useLang();
   const [allPanels, setAllPanels]     = useState([]);
   const [loading, setLoading]         = useState(true);
   const [filterBrand, setFilterBrand] = useState("");
@@ -426,46 +428,47 @@ export default function PanelMixer({ onBack }) {
       <div className="mixer-topbar">
         <div className="mixer-topbar-left">
           <button className="mixer-back-btn" onClick={() => onBack && onBack()}>
-            ← Retour au calculateur
+            {t.backToCalc}
           </button>
           <div>
-            <div className="mixer-topbar-title">⚡ Mix de panneaux</div>
-            <div className="mixer-topbar-sub">Assemblage sur mesure</div>
+            <div className="mixer-topbar-title">{t.mixTitle}</div>
+            <div className="mixer-topbar-sub">{t.mixSubtitle}</div>
           </div>
         </div>
+        <LangToggle />
       </div>
 
       <div className="mixer-content">
-        <div className="mixer-title">Assemblage sur mesure</div>
+        <div className="mixer-title">{t.mixSubtitle}</div>
         <div className="mixer-subtitle">
-          Trouvez la combinaison optimale de panneaux pour remplir n'importe quelle dimension cible
+          {t.mixDescription}
         </div>
 
         {/* Étape 1 — Filtre */}
         <div className="mixer-form-card">
           <div className="mixer-form-title">
             <span className="mixer-step-badge">1</span>
-            Filtrer le catalogue (optionnel)
+            {t.step1Title}
           </div>
           <div style={{fontSize:13,color:"#6e6e73",marginBottom:14}}>
-            Tous les panneaux actifs sont automatiquement pris en compte. Filtrez si vous souhaitez restreindre à une marque ou un pitch précis.
+            {t.step1Hint}
           </div>
           <div className="mixer-filters">
             <select className="mixer-select" style={{width:"auto"}} value={filterBrand}
               onChange={e => { setFilterBrand(e.target.value); setFilterPitch(""); setSolutions(null); setChosenSol(null); }}>
-              <option value="">Toutes les marques</option>
+              <option value="">{t.allBrands}</option>
               {brands.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
             <select className="mixer-select" style={{width:"auto"}} value={filterPitch}
               onChange={e => { setFilterPitch(e.target.value); setSolutions(null); setChosenSol(null); }}>
-              <option value="">Tous les pitches</option>
+              <option value="">{t.allPitches}</option>
               {pitches.map(p => <option key={p} value={p}>{p} mm</option>)}
             </select>
           </div>
           {loading ? (
-            <div style={{color:"#aeaeb2",fontSize:13}}>Chargement…</div>
+            <div style={{color:"#aeaeb2",fontSize:13}}>{t.loading}</div>
           ) : activePanels.length === 0 ? (
-            <div style={{color:"#ff3b30",fontSize:13,fontWeight:600}}>Aucun panneau trouvé — importez votre catalogue via l'Admin</div>
+            <div style={{color:"#ff3b30",fontSize:13,fontWeight:600}}>{t.noPanelsFound}</div>
           ) : (
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:4}}>
               {activePanels.map(p => (
@@ -486,11 +489,11 @@ export default function PanelMixer({ onBack }) {
         <div className="mixer-form-card">
           <div className="mixer-form-title">
             <span className="mixer-step-badge">2</span>
-            Dimensions de l'espace à remplir
+            {t.step2Title}
           </div>
           <div className="mixer-form-grid">
             <div className="mixer-form-group">
-              <label className="mixer-label">Largeur souhaitée <span className="mixer-label-hint">(en mètres)</span></label>
+              <label className="mixer-label">{t.desiredWidth} <span className="mixer-label-hint">{t.inMeters}</span></label>
               <div className="mixer-input-wrap">
                 <input className="mixer-input" type="number" step="0.001" min="0.1" max="50"
                   placeholder="ex : 1.25"
@@ -501,7 +504,7 @@ export default function PanelMixer({ onBack }) {
               <div className="mixer-input-hint">Exemple : 3.5 pour 3,50 mètres</div>
             </div>
             <div className="mixer-form-group">
-              <label className="mixer-label">Hauteur souhaitée <span className="mixer-label-hint">(en mètres)</span></label>
+              <label className="mixer-label">{t.desiredHeight} <span className="mixer-label-hint">{t.inMeters}</span></label>
               <div className="mixer-input-wrap">
                 <input className="mixer-input" type="number" step="0.001" min="0.1" max="30"
                   placeholder="ex : 2.00"
@@ -512,27 +515,27 @@ export default function PanelMixer({ onBack }) {
               <div className="mixer-input-hint">Exemple : 2.25 pour 2,25 mètres</div>
             </div>
             <div className="mixer-form-group">
-              <label className="mixer-label">Tolérance d'écart <span className="mixer-label-hint">(mm)</span></label>
+              <label className="mixer-label">{t.toleranceLabel} <span className="mixer-label-hint">(mm)</span></label>
               <select className="mixer-select" value={tolerance}
                 onChange={e => { setTolerance(e.target.value); setSolutions(null); setChosenSol(null); }}>
-                <option value="0">Exacte — 0 mm d'écart</option>
-                <option value="10">Jusqu'à ±10 mm</option>
-                <option value="25">Jusqu'à ±25 mm</option>
-                <option value="50">Jusqu'à ±50 mm</option>
-                <option value="100">Jusqu'à ±100 mm</option>
+                <option value="0">{t.tolExact}</option>
+                <option value="10">{t.tol10}</option>
+                <option value="25">{t.tol25}</option>
+                <option value="50">{t.tol50}</option>
+                <option value="100">{t.tol100}</option>
               </select>
             </div>
             <div className="mixer-form-group" style={{justifyContent:"flex-end"}}>
               <button className="mixer-btn-solve" onClick={handleSolve} disabled={!canSolve || solving}>
-                {solving ? "⏳ Calcul…" : "🔍 Calculer le mix"}
+                {solving ? t.calculating : t.calculateMix}
               </button>
             </div>
           </div>
           {activePanels.length > 0 && (
             <div style={{marginTop:12,fontSize:12,color:"#6e6e73",padding:"10px 14px",background:"#f5f5f7",borderRadius:8}}>
-              <b>{activePanels.length} panneau{activePanels.length > 1 ? "x" : ""} disponible{activePanels.length > 1 ? "s" : ""}</b> ·
-              Largeurs : {[...new Set(activePanels.map(p => Math.round(p.panel_width_m * 1000)))].sort((a,b)=>a-b).map(w=>`${w}mm`).join(", ")} ·
-              Hauteurs : {[...new Set(activePanels.map(p => Math.round(p.panel_height_m * 1000)))].sort((a,b)=>a-b).map(h=>`${h}mm`).join(", ")}
+              <b>{t.panelsAvailable(activePanels.length)}</b> ·
+              {t.widthsLabel} {[...new Set(activePanels.map(p => Math.round(p.panel_width_m * 1000)))].sort((a,b)=>a-b).map(w=>`${w}mm`).join(", ")} ·
+              {t.heightsLabel} {[...new Set(activePanels.map(p => Math.round(p.panel_height_m * 1000)))].sort((a,b)=>a-b).map(h=>`${h}mm`).join(", ")}
             </div>
           )}
         </div>
@@ -542,8 +545,8 @@ export default function PanelMixer({ onBack }) {
           <>
             <div className="mixer-results-header">
               {solutions.length === 0
-                ? "Aucune combinaison trouvée — augmentez la tolérance ou ajoutez des panneaux de tailles différentes"
-                : `${solutions.length} solution${solutions.length > 1 ? "s" : ""} trouvée${solutions.length > 1 ? "s" : ""} — cliquez sur une solution pour la sélectionner`
+                ? t.noCombo
+                : t.solutionsFound(solutions.length)
               }
             </div>
             <div className="mixer-solutions">
@@ -560,10 +563,9 @@ export default function PanelMixer({ onBack }) {
             {solutions.length === 0 && (
               <div className="mixer-empty">
                 <div className="mixer-empty-icon">🔧</div>
-                <div className="mixer-empty-title">Aucune combinaison valide</div>
+                <div className="mixer-empty-title">{t.noValidCombo}</div>
                 <div className="mixer-empty-sub">
-                  Vérifiez que votre catalogue contient des panneaux aux bonnes dimensions,
-                  ou augmentez la tolérance pour accepter un léger écart.
+                  {t.noValidComboHint}
                 </div>
               </div>
             )}
@@ -588,6 +590,7 @@ export default function PanelMixer({ onBack }) {
 // ── Solution card ──────────────────────────────────────────────────────────
 
 function SolutionCard({ sol, rank, isChosen, onChoose }) {
+  const { t } = useLang();
   return (
     <div className={`sol-card ${isChosen ? "selected-sol" : ""}`}>
       <div className="sol-header">
@@ -604,10 +607,10 @@ function SolutionCard({ sol, rank, isChosen, onChoose }) {
         </div>
         <div className="sol-header-right">
           <span className={`sol-waste-badge ${sol.waste === 0 ? "perfect" : "good"}`}>
-            {sol.waste === 0 ? "✓ Ajustement parfait" : `±${sol.waste} mm d'écart`}
+            {sol.waste === 0 ? t.perfectFit : t.deviation(sol.waste)}
           </span>
           <button className={`sol-select-btn ${isChosen ? "active" : ""}`} onClick={onChoose}>
-            {isChosen ? "✓ Sélectionnée" : "Sélectionner"}
+            {isChosen ? t.selected : t.select}
           </button>
         </div>
       </div>
@@ -615,44 +618,44 @@ function SolutionCard({ sol, rank, isChosen, onChoose }) {
         <div className="sol-viz">
           <PanelGrid wc={sol.wc} hc={sol.hc} />
           <div className="sol-viz-label">
-            {Object.entries(sol.wc.combo).map(([w,n]) => `${n}×${w}mm`).join(" + ")} de large<br/>
-            {Object.entries(sol.hc.combo).map(([h,n]) => `${n}×${h}mm`).join(" + ")} de haut
+            {Object.entries(sol.wc.combo).map(([w,n]) => `${n}×${w}mm`).join(" + ")} {t.wideLabel}<br/>
+            {Object.entries(sol.hc.combo).map(([h,n]) => `${n}×${h}mm`).join(" + ")} {t.tallLabel}
           </div>
         </div>
         <div className="sol-details">
           <div className="sol-layout-list">
-            {sol.layout.map((t, i) => (
+            {sol.layout.map((tile, i) => (
               <div key={i} className="sol-panel-row">
                 <div className="sol-panel-dot" style={{background: COLORS[i % COLORS.length]}} />
                 <div className="sol-panel-info">
-                  <div className="sol-panel-name">{t.panel.panel_ref}</div>
+                  <div className="sol-panel-name">{tile.panel.panel_ref}</div>
                   <div className="sol-panel-dim">
-                    {t.wMm}×{t.hMm} mm · {t.cols} col{t.cols>1?"s":""} × {t.rows} rang{t.rows>1?"s":""}
-                    {t.panel.marque ? ` · ${t.panel.marque}` : ""}
+                    {tile.wMm}×{tile.hMm} mm · {tile.cols} col{tile.cols>1?"s":""} × {tile.rows} rang{tile.rows>1?"s":""}
+                    {tile.panel.marque ? ` · ${tile.panel.marque}` : ""}
                   </div>
                 </div>
-                <div className="sol-panel-count">{t.count}×</div>
+                <div className="sol-panel-count">{tile.count}×</div>
               </div>
             ))}
           </div>
           <div className="sol-specs">
             <div className="sol-spec">
-              <div className="sol-spec-label">Dimensions réelles</div>
+              <div className="sol-spec-label">{t.realDimShort}</div>
               <div className="sol-spec-val">{(sol.actualW/1000).toFixed(3)} m</div>
               <div className="sol-spec-sub">× {(sol.actualH/1000).toFixed(3)} m</div>
             </div>
             <div className="sol-spec">
-              <div className="sol-spec-label">Résolution</div>
+              <div className="sol-spec-label">{t.resolution}</div>
               <div className="sol-spec-val">{sol.totalPixW}×{sol.totalPixH}</div>
               <div className="sol-spec-sub">{((sol.totalPixW * sol.totalPixH)/1e6).toFixed(1)} Mpx</div>
             </div>
             <div className="sol-spec">
-              <div className="sol-spec-label">Poids total</div>
+              <div className="sol-spec-label">{t.totalWeight}</div>
               <div className="sol-spec-val">{sol.totalWeight.toFixed(1)} kg</div>
               <div className="sol-spec-sub">{sol.totalPanels} panneaux</div>
             </div>
             <div className="sol-spec">
-              <div className="sol-spec-label">Conso. max</div>
+              <div className="sol-spec-label">{t.maxPowerLabel}</div>
               <div className="sol-spec-val">{(sol.totalPowerMax/1000).toFixed(2)} kW</div>
               <div className="sol-spec-sub">moy : {(sol.totalPowerAvg/1000).toFixed(2)} kW</div>
             </div>
@@ -666,23 +669,24 @@ function SolutionCard({ sol, rank, isChosen, onChoose }) {
 // ── Summary panel ──────────────────────────────────────────────────────────
 
 function SummaryPanel({ sol, rank, targetW, targetH, onDeselect }) {
+  const { t } = useLang();
   return (
     <div className="summary-panel">
       <div className="summary-title">
         <span style={{fontSize:20}}>📋</span>
-        Récapitulatif — Solution #{rank} sélectionnée
+        {t.summaryTitle(rank)}
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12,marginBottom:20}}>
         {[
-          { label:"Dimension cible", val:`${parseFloat(targetW).toFixed(3)} m × ${parseFloat(targetH).toFixed(3)} m` },
-          { label:"Dimension réelle", val:`${(sol.actualW/1000).toFixed(3)} m × ${(sol.actualH/1000).toFixed(3)} m` },
-          { label:"Écart", val: sol.waste === 0 ? "Parfait" : `±${sol.waste} mm`, ok: sol.waste === 0 },
-          { label:"Panneaux total", val:`${sol.totalPanels} (${sol.types} type${sol.types>1?"s":""})` },
-          { label:"Résolution", val:`${sol.totalPixW} × ${sol.totalPixH} px` },
-          { label:"Poids total", val:`${sol.totalWeight.toFixed(1)} kg` },
-          { label:"Conso. max", val:`${(sol.totalPowerMax/1000).toFixed(2)} kW` },
-          { label:"Conso. moy.", val:`${(sol.totalPowerAvg/1000).toFixed(2)} kW` },
+          { label: t.targetDim, val:`${parseFloat(targetW).toFixed(3)} m × ${parseFloat(targetH).toFixed(3)} m` },
+          { label: t.realDim, val:`${(sol.actualW/1000).toFixed(3)} m × ${(sol.actualH/1000).toFixed(3)} m` },
+          { label: t.gap, val: sol.waste === 0 ? t.perfect : `±${sol.waste} mm`, ok: sol.waste === 0 },
+          { label: t.totalPanels, val:`${sol.totalPanels} (${sol.types} type${sol.types>1?"s":""})` },
+          { label: t.resolution, val:`${sol.totalPixW} × ${sol.totalPixH} px` },
+          { label: t.totalWeight, val:`${sol.totalWeight.toFixed(1)} kg` },
+          { label: t.maxPowerLabel, val:`${(sol.totalPowerMax/1000).toFixed(2)} kW` },
+          { label: t.avgPowerLabel, val:`${(sol.totalPowerAvg/1000).toFixed(2)} kW` },
         ].map((item, i) => (
           <div key={i} style={{padding:"12px 14px",background:"#f5f5f7",borderRadius:10}}>
             <div style={{fontSize:10,fontWeight:700,color:"#aeaeb2",textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>{item.label}</div>
@@ -691,26 +695,26 @@ function SummaryPanel({ sol, rank, targetW, targetH, onDeselect }) {
         ))}
       </div>
 
-      <div style={{fontSize:13,fontWeight:700,color:"#1d1d1f",marginBottom:10,textTransform:"uppercase",letterSpacing:".05em"}}>Bon de commande</div>
+      <div style={{fontSize:13,fontWeight:700,color:"#1d1d1f",marginBottom:10,textTransform:"uppercase",letterSpacing:".05em"}}>{t.orderSheet}</div>
       <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:4}}>
-        {sol.layout.map((t, i) => (
+        {sol.layout.map((tile, i) => (
           <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#f5f5f7",borderRadius:10}}>
             <div style={{width:13,height:13,borderRadius:3,background:COLORS[i%COLORS.length],flexShrink:0}} />
             <div style={{flex:1}}>
-              <span style={{fontWeight:700,fontSize:13}}>{t.panel.panel_ref}</span>
-              <span style={{color:"#6e6e73",fontSize:12,marginLeft:8}}>{t.wMm}×{t.hMm} mm · {t.panel.pixel_pitch_mm}mm pitch · {t.cols} col. × {t.rows} rang{t.rows>1?"s":""}</span>
+              <span style={{fontWeight:700,fontSize:13}}>{tile.panel.panel_ref}</span>
+              <span style={{color:"#6e6e73",fontSize:12,marginLeft:8}}>{tile.wMm}×{tile.hMm} mm · {tile.panel.pixel_pitch_mm}mm pitch · {tile.cols} col. × {tile.rows} rang{tile.rows>1?"s":""}</span>
             </div>
-            <div style={{fontSize:18,fontWeight:800,color:"#0071e3"}}>{t.count}×</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#0071e3"}}>{tile.count}×</div>
           </div>
         ))}
       </div>
 
       <div className="summary-actions">
-        <button className="btn-pdf" onClick={() => exportPDF(sol, targetW, targetH)}>
-          ⬇ Exporter en PDF
+        <button className="btn-pdf" onClick={() => exportPDF(sol, targetW, targetH, t)}>
+          {t.exportPdfMix}
         </button>
         <button className="btn-deselect" onClick={onDeselect}>
-          Désélectionner
+          {t.deselect}
         </button>
       </div>
     </div>

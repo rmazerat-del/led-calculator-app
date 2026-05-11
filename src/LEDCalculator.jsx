@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "./supabaseClient";
+import { useLang, LangToggle } from "./LanguageContext";
 
 // ── CONTRÔLEURS NOVASTAR ──────────────────────────────────────────────────────
 // ports = sorties Ethernet RJ45 vers panneaux LED
@@ -839,6 +840,7 @@ async function generatePDF(selected, result, quality) {
 
 // ── COMPOSANT PRINCIPAL ───────────────────────────────────────────────────────
 export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
+  const { t } = useLang();
   const [products, setProducts]       = useState(STATIC_PRODUCTS);
   const [selIdx, setSelIdx]           = useState(0);
   const [brandFilter, setBrandFilter] = useState("all");
@@ -1024,18 +1026,18 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
   const scrH  = Math.max(30, safeH * scale);
 
   const MODES = [
-    { id: "dimensions", label: "Dimensions", icon: "📐" },
-    { id: "panels",     label: "Panneaux",   icon: "⬛" },
-    { id: "resolution", label: "Résolution", icon: "🎯" },
+    { id: "dimensions", label: t.modeDimensions, icon: "📐" },
+    { id: "panels",     label: t.modePanels,     icon: "⬛" },
+    { id: "resolution", label: t.modeResolution, icon: "🎯" },
   ];
   const TABS = [
-    { id: "product",  label: "Produit",   icon: "📦" },
-    { id: "screen",   label: "Écran",     icon: "🖥️" },
-    { id: "power",    label: "Élec.",     icon: "⚡" },
-    { id: "install",  label: "Install.",  icon: "🔧" },
-    { id: "compare",  label: "Comparer",  icon: "⚖️" },
-    { id: "project",  label: "Projet",    icon: "📋" },
-    { id: "history",  label: "Historique",icon: "🕐" },
+    { id: "product",  label: t.tabProduct,  icon: "📦" },
+    { id: "screen",   label: t.tabScreen,   icon: "🖥️" },
+    { id: "power",    label: t.tabPower,    icon: "⚡" },
+    { id: "install",  label: t.tabInstall,  icon: "🔧" },
+    { id: "compare",  label: t.tabCompare,  icon: "⚖️" },
+    { id: "project",  label: t.tabProject,  icon: "📋" },
+    { id: "history",  label: t.tabHistory,  icon: "🕐" },
   ];
 
   const BG_PRESETS = [
@@ -1082,24 +1084,25 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
         </div>
 
         <div className="topbar-kpis">
-          <div className="topbar-kpi"><div className="topbar-kpi-label">Résolution</div><div className="topbar-kpi-value">{rW} × {rH} px</div></div>
+          <div className="topbar-kpi"><div className="topbar-kpi-label">{t.resolution}</div><div className="topbar-kpi-value">{rW} × {rH} px</div></div>
           <div className="topbar-sep" />
           <div className="topbar-kpi"><div className="topbar-kpi-label">Surface</div><div className="topbar-kpi-value">{surface.toFixed(2)} m²</div></div>
           <div className="topbar-sep" />
-          <div className="topbar-kpi"><div className="topbar-kpi-label">Panneaux</div><div className="topbar-kpi-value">{pW} × {pH} = {totalPanels} u.</div></div>
+          <div className="topbar-kpi"><div className="topbar-kpi-label">{t.panels}</div><div className="topbar-kpi-value">{pW} × {pH} = {totalPanels} u.</div></div>
           <div className="topbar-sep" />
-          <div className="topbar-kpi"><div className="topbar-kpi-label">Poids</div><div className="topbar-kpi-value">{totalWeight.toFixed(0)} kg</div></div>
+          <div className="topbar-kpi"><div className="topbar-kpi-label">{t.weight}</div><div className="topbar-kpi-value">{totalWeight.toFixed(0)} kg</div></div>
         </div>
 
         <div className="topbar-right">
           <div className="topbar-badge" style={{ color: quality.color, borderColor: quality.color + "55", background: quality.color + "18" }}>
             {quality.label}
           </div>
-          {onMultiScreen && <button onClick={onMultiScreen} className="admin-btn" style={{background:"linear-gradient(145deg,#00b4d8,#0077b6)",color:"white",border:"none"}}>📺 Multi</button>}
-          {onMixer && <button onClick={onMixer} className="admin-btn" style={{background:"linear-gradient(145deg,#6f42c1,#9d6bff)",color:"white",border:"none"}}>⚡ Mix</button>}
-          {onAdmin && <button onClick={onAdmin} className="admin-btn">Admin</button>}
+          {onMultiScreen && <button onClick={onMultiScreen} className="admin-btn" style={{background:"linear-gradient(145deg,#00b4d8,#0077b6)",color:"white",border:"none"}}>{t.multiBtn}</button>}
+          {onMixer && <button onClick={onMixer} className="admin-btn" style={{background:"linear-gradient(145deg,#6f42c1,#9d6bff)",color:"white",border:"none"}}>{t.mixBtn}</button>}
+          {onAdmin && <button onClick={onAdmin} className="admin-btn">{t.adminBtn}</button>}
+          <LangToggle />
           <button onClick={handlePDF} disabled={pdfLoading} className="pdf-topbar-btn">
-            {pdfLoading ? "⏳ Génération…" : "⬇ Exporter PDF"}
+            {pdfLoading ? "⏳ Génération…" : t.exportPdf}
           </button>
         </div>
       </div>
@@ -1108,13 +1111,13 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
       <div className="main-layout">
         {/* LEFT */}
         <div className="left-panel">
-          <div className="section-header">Modèle de panneau</div>
+          <div className="section-header">{t.panelModel}</div>
 
           <div style={{ marginBottom: 8 }}>
-            <label className="input-label">Marque</label>
+            <label className="input-label">{t.brand}</label>
             <div className="product-select-wrap">
               <select className="product-select" value={brandFilter} onChange={e => { setBrandFilter(e.target.value); setSelIdx(0); }}>
-                <option value="all">Toutes les marques</option>
+                <option value="all">{t.allBrands}</option>
                 {brands.filter(b => b !== "all").map(b => <option key={b} value={b}>{b}</option>)}
               </select>
               {chevron}
@@ -1122,14 +1125,14 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
           </div>
 
           <div style={{ marginBottom: 8 }}>
-            <label className="input-label">Format cabinet</label>
+            <label className="input-label">{t.cabinetFormat}</label>
             <div className="product-select-wrap">
               <select className="product-select" value={sizeFilter} onChange={e => { setSizeFilter(e.target.value); setSelIdx(0); }}>
-                <option value="all">Tous les formats</option>
-                <option value="60x34">60 × 33,7 cm (QSTECH)</option>
-                <option value="50x100">50 × 100 cm</option>
-                <option value="50x50">50 × 50 cm</option>
-                <option value="other">Autres formats</option>
+                <option value="all">{t.allFormats}</option>
+                <option value="60x34">{t.fmt6034}</option>
+                <option value="50x100">{t.fmt50100}</option>
+                <option value="50x50">{t.fmt5050}</option>
+                <option value="other">{t.fmtOther}</option>
               </select>
               {chevron}
             </div>
@@ -1146,7 +1149,7 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
             {chevron}
           </div>
 
-          <div className="section-header">Mode de saisie</div>
+          <div className="section-header">{t.inputMode}</div>
           <div className="mode-grid">
             {MODES.map(m => (
               <button key={m.id} className={`mode-btn ${mode === m.id ? "active" : ""}`} onClick={() => {
@@ -1163,26 +1166,26 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
 
           <div className="input-group">
             {mode === "dimensions" && (<>
-              <div><label className="input-label">Largeur souhaitée</label><SpinBox value={width} onChange={setWidth} step={0.1} min={0} unit="m" /></div>
-              <div><label className="input-label">Hauteur souhaitée</label><SpinBox value={height} onChange={setHeight} step={0.1} min={0} unit="m" /></div>
+              <div><label className="input-label">{t.widthDesired}</label><SpinBox value={width} onChange={setWidth} step={0.1} min={0} unit="m" /></div>
+              <div><label className="input-label">{t.heightDesired}</label><SpinBox value={height} onChange={setHeight} step={0.1} min={0} unit="m" /></div>
             </>)}
             {mode === "panels" && (<>
-              <div><label className="input-label">Panneaux en largeur</label><SpinBox value={panelsW} onChange={setPanelsW} step={1} min={1} unit="col" /></div>
-              <div><label className="input-label">Panneaux en hauteur</label><SpinBox value={panelsH} onChange={setPanelsH} step={1} min={1} unit="row" /></div>
+              <div><label className="input-label">{t.panelsInWidth}</label><SpinBox value={panelsW} onChange={setPanelsW} step={1} min={1} unit="col" /></div>
+              <div><label className="input-label">{t.panelsInHeight}</label><SpinBox value={panelsH} onChange={setPanelsH} step={1} min={1} unit="row" /></div>
             </>)}
             {mode === "resolution" && (<>
-              <div><label className="input-label">Résolution largeur</label><SpinBox value={resW} onChange={setResW} step={selected.resolution_w} min={selected.resolution_w} unit="px" /></div>
-              <div><label className="input-label">Résolution hauteur</label><SpinBox value={resH} onChange={setResH} step={selected.resolution_h} min={selected.resolution_h} unit="px" /></div>
+              <div><label className="input-label">{t.resWidthInput}</label><SpinBox value={resW} onChange={setResW} step={selected.resolution_w} min={selected.resolution_w} unit="px" /></div>
+              <div><label className="input-label">{t.resHeightInput}</label><SpinBox value={resH} onChange={setResH} step={selected.resolution_h} min={selected.resolution_h} unit="px" /></div>
             </>)}
           </div>
 
-          <div className="section-header">Synthèse</div>
+          <div className="section-header">{t.synthLabel}</div>
           <div className="summary-grid">
             {[
-              { label: "Panneaux",   value: `${pW} × ${pH}`,                                         sub: `= ${totalPanels} total`,      accent: "#2563eb" },
-              { label: "Dimensions", value: `${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)} m`, sub: `${surface.toFixed(2)} m²`,    accent: "#0ea5e9" },
-              { label: "Résolution", value: `${(totalPixels/1000000).toFixed(1)} Mpx`,                sub: `${rW}×${rH}`,                 accent: "#0ea5e9" },
-              { label: "Poids",      value: `${totalWeight.toFixed(0)} kg`,                           sub: `${selected.weight_kgs} kg/u`, accent: "#10b981" },
+              { label: t.panels,     value: `${pW} × ${pH}`,                                         sub: t.totalSub(totalPanels),      accent: "#2563eb" },
+              { label: t.dimensions, value: `${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)} m`, sub: `${surface.toFixed(2)} m²`,    accent: "#0ea5e9" },
+              { label: t.resolution, value: `${(totalPixels/1000000).toFixed(1)} Mpx`,                sub: `${rW}×${rH}`,                 accent: "#0ea5e9" },
+              { label: t.weight,     value: `${totalWeight.toFixed(0)} kg`,                           sub: `${selected.weight_kgs} kg/u`, accent: "#10b981" },
             ].map(s => (
               <div key={s.label} className="summary-card" style={{ borderLeftColor: s.accent }}>
                 <div className="summary-label">{s.label}</div>
@@ -1193,7 +1196,7 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
           </div>
 
           <button className="pdf-btn" onClick={handlePDF} disabled={pdfLoading}>
-            {pdfLoading ? "⏳ Génération en cours…" : "⬇ Exporter en PDF"}
+            {pdfLoading ? t.generatingPdf : t.exportPdf}
           </button>
         </div>
 
@@ -1221,7 +1224,7 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
                   backdropFilter:"blur(6px)", transition:"all 0.15s",
                 }}>{p.id === "custom" && customBg ? "✓ Image" : p.label}</button>
               ))}
-              <button onClick={() => setShowSilhouette(s => !s)} title="Silhouette humaine (1.75 m)" style={{
+              <button onClick={() => setShowSilhouette(s => !s)} title={t.silhouette} style={{
                 padding:"3px 8px", fontSize:"9px", fontFamily:"var(--font-mono)",
                 fontWeight: showSilhouette ? 700 : 400,
                 letterSpacing:"0.04em",
@@ -1230,7 +1233,7 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
                 background: showSilhouette ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.3)",
                 color: showSilhouette ? "#fff" : "rgba(255,255,255,0.45)",
                 backdropFilter:"blur(6px)", transition:"all 0.15s",
-              }}>👤 Échelle</button>
+              }}>{t.silhouette}</button>
             </div>
             <div className="screen-container">
               <div className="dim-label">
@@ -1277,7 +1280,7 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
                     ))}
                   </div>
                   <div className="screen-overlay-tl">
-                    <div className="screen-overlay-title">{pW} × {pH} cabinets</div>
+                    <div className="screen-overlay-title">{t.cabinetsLabel(pW, pH)}</div>
                     <div className="screen-overlay-sub">{rW} × {rH} px · {surface.toFixed(1)} m²</div>
                   </div>
                   <div className="screen-bottom-bar" />
@@ -1306,8 +1309,8 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
                 </div>
               </div>
               <div className="viz-badges">
-                <span className="viz-badge" style={{ color: "#fbbf24", background: "rgba(251,191,36,0.15)", borderColor: "rgba(251,191,36,0.35)" }}>👁 Min: {viewMin.toFixed(1)} m</span>
-                <span className="viz-badge" style={{ color: "#34d399", background: "rgba(52,211,153,0.15)", borderColor: "rgba(52,211,153,0.35)" }}>✓ Optimal: {viewOpt.toFixed(1)} m</span>
+                <span className="viz-badge" style={{ color: "#fbbf24", background: "rgba(251,191,36,0.15)", borderColor: "rgba(251,191,36,0.35)" }}>👁 {t.vizMin} {viewMin.toFixed(1)} m</span>
+                <span className="viz-badge" style={{ color: "#34d399", background: "rgba(52,211,153,0.15)", borderColor: "rgba(52,211,153,0.35)" }}>✓ {t.vizOptimal} {viewOpt.toFixed(1)} m</span>
                 <span className="viz-badge" style={{ color: "#60a5fa", background: "rgba(96,165,250,0.15)", borderColor: "rgba(96,165,250,0.35)" }}>📐 {diagonal.toFixed(0)}"</span>
                 <span className="viz-badge" style={{ color: quality.color, background: quality.color + "25", borderColor: quality.color + "55" }}>◈ {quality.label}</span>
               </div>
@@ -1326,27 +1329,27 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
             {activeTab === "product" && (
               <div>
                 <div className="stat-grid-3">
-                  <StatCard icon="📏" label="Pitch pixel"  value={`${selected.pixel_pitch_mm} mm`} sub="Résolution angulaire" accentColor="#e8ff47" />
-                  <StatCard icon="💡" label="Luminosité"   value={`${selected.nits} nits`}         sub="Luminance max"        accentColor="#ffb347" />
-                  <StatCard icon="🔄" label="Refresh rate" value={`${selected.refresh_rate_hz} Hz`} sub="Fréquence rafraîch."  accentColor="#47c4ff" />
+                  <StatCard icon="📏" label={t.statPitch}       value={`${selected.pixel_pitch_mm} mm`} sub={t.subAngularRes} accentColor="#e8ff47" />
+                  <StatCard icon="💡" label={t.statLuminosity}  value={`${selected.nits} nits`}         sub={t.subLuminanceMax} accentColor="#ffb347" />
+                  <StatCard icon="🔄" label={t.statRefreshRate} value={`${selected.refresh_rate_hz} Hz`} sub={t.subRefreshFreq} accentColor="#47c4ff" />
                 </div>
                 <div className="data-table-wrap">
                   <table className="data-table">
-                    <thead><tr><th>Paramètre</th><th>Valeur</th></tr></thead>
+                    <thead><tr><th>{t.colParam}</th><th>{t.colValue}</th></tr></thead>
                     <tbody>
                       {[
-                        ["Référence produit",   selected.panel_ref],
-                        ["Type LED",            selected.type_led || "—"],
-                        ["Série",               selected.brand    || "—"],
-                        ["Marque",              selected.marque   || "—"],
-                        ["Pitch pixel",         `${selected.pixel_pitch_mm} mm`],
-                        ["Dimensions cabinet",  `${Math.round(selected.panel_width_m*100)} × ${Math.round(selected.panel_height_m*100)} cm`],
-                        ["Résolution cabinet",  `${selected.resolution_w} × ${selected.resolution_h} px`],
-                        ["Poids unitaire",      `${selected.weight_kgs} kg`],
-                        ["Luminosité",          `${selected.nits} nits`],
-                        ["Refresh rate",        `${selected.refresh_rate_hz} Hz`],
-                        ["Conso max (unité)",   `${selected.power_max_w} W`],
-                        ["Conso moy. (unité)",  `${selected.power_avg_w} W`],
+                        [t.rowProductRef,  selected.panel_ref],
+                        [t.rowLedType,     selected.type_led || "—"],
+                        [t.rowSerie,       selected.brand    || "—"],
+                        [t.rowBrandManu,   selected.marque   || "—"],
+                        [t.rowPitch,       `${selected.pixel_pitch_mm} mm`],
+                        [t.rowCabinetDim,  `${Math.round(selected.panel_width_m*100)} × ${Math.round(selected.panel_height_m*100)} cm`],
+                        [t.rowCabinetRes,  `${selected.resolution_w} × ${selected.resolution_h} px`],
+                        [t.rowUnitWeight,  `${selected.weight_kgs} kg`],
+                        [t.rowLuminosity,  `${selected.nits} nits`],
+                        [t.rowRefreshRate, `${selected.refresh_rate_hz} Hz`],
+                        [t.rowMaxPowerUnit,`${selected.power_max_w} W`],
+                        [t.rowAvgPowerUnit,`${selected.power_avg_w} W`],
                       ].map(([k, v]) => <tr key={k}><td>{k}</td><td>{v}</td></tr>)}
                     </tbody>
                   </table>
@@ -1356,25 +1359,25 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
             {activeTab === "screen" && (
               <div>
                 <div className="stat-grid-3">
-                  <StatCard icon="⬛" label="Total panneaux" value={`${pW} × ${pH}`}                        sub={`= ${totalPanels} cabinets`}                           accentColor="#47c4ff" />
-                  <StatCard icon="📐" label="Surface totale" value={`${surface.toFixed(2)} m²`}             sub={`${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)} m`} accentColor="#e8ff47" />
-                  <StatCard icon="🎯" label="Résolution"     value={`${(totalPixels/1000000).toFixed(2)} Mpx`} sub={`${rW} × ${rH} px`}                                accentColor={quality.color} />
+                  <StatCard icon="⬛" label={t.statTotalPanels2} value={`${pW} × ${pH}`}                        sub={t.subTotalCabinets(totalPanels)}                      accentColor="#47c4ff" />
+                  <StatCard icon="📐" label={t.statTotalSurface} value={`${surface.toFixed(2)} m²`}             sub={`${totalWidth.toFixed(2)} × ${totalHeight.toFixed(2)} m`} accentColor="#e8ff47" />
+                  <StatCard icon="🎯" label={t.statResolution2}  value={`${(totalPixels/1000000).toFixed(2)} Mpx`} sub={`${rW} × ${rH} px`}                              accentColor={quality.color} />
                 </div>
                 <div className="data-table-wrap">
                   <table className="data-table">
                     <tbody>
                       {[
-                        ["Panneaux (L × H)",  `${pW} × ${pH} = ${totalPanels} unités`],
-                        ["Dimensions réelles",`${totalWidth.toFixed(3)} × ${totalHeight.toFixed(3)} m`],
-                        ["Résolution totale", `${rW} × ${rH} px`],
-                        ["Mégapixels",        `${(totalPixels/1000000).toFixed(3)} Mpx`],
-                        ["Ratio d'image",     getRatio(rW, rH)],
-                        ["Densité pixels",    `${pixDensity.toLocaleString()} px/m²`],
-                        ["Diagonale",         `${diagonal.toFixed(1)} pouces`],
-                        ["Surface active",    `${surface.toFixed(3)} m²`],
-                        ["Poids total",       `${totalWeight.toFixed(1)} kg`],
-                        ["Recul minimum",     `${viewMin.toFixed(2)} m`],
-                        ["Recul optimal",     `${viewOpt.toFixed(2)} m`],
+                        [t.rowPanelsLH,     `${pW} × ${pH} = ${totalPanels} u.`],
+                        [t.rowActualDim,    `${totalWidth.toFixed(3)} × ${totalHeight.toFixed(3)} m`],
+                        [t.rowTotalRes,     `${rW} × ${rH} px`],
+                        [t.rowMegapixels,   `${(totalPixels/1000000).toFixed(3)} Mpx`],
+                        [t.rowAspectRatio,  getRatio(rW, rH)],
+                        [t.rowPixelDensity, `${pixDensity.toLocaleString()} px/m²`],
+                        [t.rowDiagonal,     `${diagonal.toFixed(1)} ${t.inches}`],
+                        [t.rowActiveSurface,`${surface.toFixed(3)} m²`],
+                        [t.rowTotalWeightS, `${totalWeight.toFixed(1)} kg`],
+                        [t.rowMinDistance,  `${viewMin.toFixed(2)} m`],
+                        [t.rowOptDistance,  `${viewOpt.toFixed(2)} m`],
                       ].map(([k, v]) => <tr key={k}><td>{k}</td><td>{v}</td></tr>)}
                     </tbody>
                   </table>
@@ -1384,13 +1387,13 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
             {activeTab === "power" && (
               <div>
                 <div className="stat-grid-3">
-                  <StatCard icon="⚡"  label="Conso max"  value={`${Math.round(totalPowerMax)} W`} sub={`${(totalPowerMax/1000).toFixed(2)} kW`} accentColor="#ff5147" />
-                  <StatCard icon="📉" label="Conso moy." value={`${Math.round(totalPowerAvg)} W`} sub={`${(totalPowerAvg/1000).toFixed(2)} kW`} accentColor="#ffb347" />
-                  <StatCard icon="🌡️" label="BTU/h"      value={BTU.toFixed(0)}                   sub="Dissipation thermique"                    accentColor="#47c4ff" />
+                  <StatCard icon="⚡"  label={t.statMaxPower2} value={`${Math.round(totalPowerMax)} W`} sub={`${(totalPowerMax/1000).toFixed(2)} kW`} accentColor="#ff5147" />
+                  <StatCard icon="📉" label={t.statAvgPower2} value={`${Math.round(totalPowerAvg)} W`} sub={`${(totalPowerAvg/1000).toFixed(2)} kW`} accentColor="#ffb347" />
+                  <StatCard icon="🌡️" label={t.statBtu}      value={BTU.toFixed(0)}                   sub={t.subThermalDiss}                         accentColor="#47c4ff" />
                 </div>
                 <div className="power-bar-wrap">
                   <div className="power-bar-header">
-                    <span className="power-bar-label">Charge moyenne vs max</span>
+                    <span className="power-bar-label">{t.loadLabel}</span>
                     <span className="power-bar-pct">{Math.round(totalPowerAvg/totalPowerMax*100)}%</span>
                   </div>
                   <div className="power-bar-track">
@@ -1401,11 +1404,11 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
                   <table className="data-table">
                     <tbody>
                       {[
-                        ["Consommation max totale",  `${Math.round(totalPowerMax)} W`],
-                        ["Consommation moy. totale", `${Math.round(totalPowerAvg)} W`],
-                        ["Puissance en kW (moy.)",   `${kW.toFixed(3)} kW`],
-                        ["BTU/heure",                `${BTU.toFixed(0)} BTU/h`],
-                        ["Coût/an estimé",           `${(costDay*365).toFixed(0)} €`],
+                        [t.rowMaxPowerTotal2, `${Math.round(totalPowerMax)} W`],
+                        [t.rowAvgPowerTotal2, `${Math.round(totalPowerAvg)} W`],
+                        [t.rowPowerKw,        `${kW.toFixed(3)} kW`],
+                        [t.rowBtu,            `${BTU.toFixed(0)} BTU/h`],
+                        [t.rowAnnualCost,     `${(costDay*365).toFixed(0)} €`],
                       ].map(([k, v]) => <tr key={k}><td>{k}</td><td>{v}</td></tr>)}
                     </tbody>
                   </table>
@@ -1415,35 +1418,35 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
             {activeTab === "install" && (
               <div>
                 <div className="stat-grid-2">
-                  <StatCard icon="🔌" label="Lignes électriques" value={`${powerLines}`}   sub={`${selected.power_cable_capacity||2200} W/ligne`}                    accentColor="#e8ff47" />
-                  <StatCard icon="🌐" label="Ports RJ45"         value={`${rj45Needed}`}   sub={`${(selected.rj45_capacity||535000).toLocaleString()} px/port`}       accentColor="#47c4ff" />
+                  <StatCard icon="🔌" label={t.statPowerLines} value={`${powerLines}`} sub={`${selected.power_cable_capacity||2200} W/ligne`} accentColor="#e8ff47" />
+                  <StatCard icon="🌐" label={t.statRj45Ports}  value={`${rj45Needed}`} sub={`${(selected.rj45_capacity||535000).toLocaleString()} px/port`} accentColor="#47c4ff" />
                 </div>
                 <div className="data-table-wrap">
                   <table className="data-table">
                     <tbody>
                       {[
-                        ["Nombre de cabinets",    `${totalPanels} unités (${pW} × ${pH})`],
-                        ["Poids unitaire",         `${selected.weight_kgs} kg`],
-                        ["Poids total",            `${totalWeight.toFixed(1)} kg`],
-                        ["Surface totale",         `${surface.toFixed(3)} m²`],
-                        ["Lignes électriques",     `${powerLines} ligne(s)`],
-                        ["Ports RJ45 requis",      `${rj45Needed} port(s)`],
-                        ["Recul min. recommandé",  `${viewMin.toFixed(2)} m`],
-                        ["Recul optimal",          `${viewOpt.toFixed(2)} m`],
+                        [t.rowCabinetCount, `${totalPanels} u. (${pW} × ${pH})`],
+                        [t.rowUnitWeightI,  `${selected.weight_kgs} kg`],
+                        [t.rowTotalWeightI, `${totalWeight.toFixed(1)} kg`],
+                        [t.rowTotalSurfaceI,`${surface.toFixed(3)} m²`],
+                        [t.rowPowerLinesI,  `${powerLines}`],
+                        [t.rowRj45Needed,   `${rj45Needed}`],
+                        [t.rowMinDistI,     `${viewMin.toFixed(2)} m`],
+                        [t.rowOptDistI,     `${viewOpt.toFixed(2)} m`],
                       ].map(([k, v]) => <tr key={k}><td>{k}</td><td>{v}</td></tr>)}
                     </tbody>
                   </table>
                 </div>
                 {/* ── CONTRÔLEURS NOVASTAR ── */}
                 <div style={{ marginBottom: 12 }}>
-                  <div className="section-label" style={{ marginBottom: 10 }}>Contrôleur Novastar — compatibilité</div>
+                  <div className="section-label" style={{ marginBottom: 10 }}>{t.novastarTitle}</div>
                   {(() => {
                     const allSorted = [...NOVASTAR_CONTROLLERS].sort((a, b) => a.maxPixels - b.maxPixels);
                     const bestModel = allSorted.find(c => c.maxPixels >= totalPixels && c.ports >= rj45Needed)?.model ?? null;
                     const SERIES = [
-                      { id: "MCTRL", label: "Cartes d'envoi PCIe",       pip: "var(--accent)" },
-                      { id: "VX",    label: "Boîtiers tout-en-un",        pip: "var(--accent2)" },
-                      { id: "H",     label: "Processeurs vidéo · H-Series", pip: "oklch(72% 0.15 295)" },
+                      { id: "MCTRL", label: t.seriesPcie,     pip: "var(--accent)" },
+                      { id: "VX",    label: t.seriesAllInOne,  pip: "var(--accent2)" },
+                      { id: "H",     label: t.seriesVideo,     pip: "oklch(72% 0.15 295)" },
                     ];
                     return SERIES.map(({ id, label, pip }) => {
                       const controllers = NOVASTAR_CONTROLLERS
@@ -1474,10 +1477,10 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
                                 : compat ? (isPremium ? "prem" : "ok")
                                 : compat === false && (pixOk || portOk) ? "warn" : "fail";
                               const badgeLabel = isBest
-                                ? (isPremium ? "★ Recommandé" : "Recommandé")
+                                ? (isPremium ? t.badgeRecommendedPrem : t.badgeRecommended)
                                 : compat
-                                  ? (isPremium ? "Premium" : "Compatible")
-                                  : (pixOk || portOk) ? "Partiel" : "Insuffisant";
+                                  ? (isPremium ? t.badgePremium : t.badgeCompatible)
+                                  : (pixOk || portOk) ? t.badgePartial : t.badgeInsufficient;
                               return (
                                 <div key={c.model} className={`ctrl-card ${cardClass}`}>
                                   <div className="ctrl-status-dot" style={{ background: dotColor }} />
@@ -1493,8 +1496,8 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
                                     </div>
                                     {!compat && (
                                       <div className="ctrl-notes" style={{ color: "var(--orange)", marginTop: 4 }}>
-                                        {!pixOk && <span>⚠ {(totalPixels/1_000_000).toFixed(2)} Mpx requis · max {(c.maxPixels/1_000_000).toFixed(1)} Mpx. </span>}
-                                        {!portOk && <span>⚠ {rj45Needed} ports requis · {c.ports} disponibles.</span>}
+                                        {!pixOk && <span>{t.warnMpx((totalPixels/1_000_000).toFixed(2), (c.maxPixels/1_000_000).toFixed(1))} </span>}
+                                        {!portOk && <span>{t.warnPorts(rj45Needed, c.ports)}</span>}
                                       </div>
                                     )}
                                     {compat && (
@@ -1533,12 +1536,12 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
                 </div>
 
                 <div className="checklist">
-                  <div className="checklist-title">Checklist installation</div>
+                  <div className="checklist-title">{t.checklistTitle}</div>
                   {[
-                    { ok: powerLines <= 4,   txt: `${powerLines} ligne(s) — ${powerLines<=4   ? "✓ Standard"          : "⚠ Prévoir tableau dédié"}` },
-                    { ok: rj45Needed <= 8,   txt: `${rj45Needed} port(s) RJ45 — ${rj45Needed<=8 ? "✓ Switch standard 8p" : "⚠ Switch 16p ou supérieur"}` },
-                    { ok: totalWeight < 300, txt: `${totalWeight.toFixed(0)} kg — ${totalWeight<300 ? "✓ Structure légère"  : "⚠ Renforcement mural requis"}` },
-                    { ok: true,              txt: `Recul optimal : ${viewOpt.toFixed(1)} m minimum` },
+                    { ok: powerLines <= 4,   txt: powerLines<=4   ? t.checkPowerOk(powerLines)          : t.checkPowerWarn(powerLines) },
+                    { ok: rj45Needed <= 8,   txt: rj45Needed<=8   ? t.checkRj45Ok(rj45Needed)           : t.checkRj45Warn(rj45Needed) },
+                    { ok: totalWeight < 300, txt: totalWeight<300  ? t.checkWeightOk(totalWeight.toFixed(0)) : t.checkWeightWarn(totalWeight.toFixed(0)) },
+                    { ok: true,              txt: t.checkDistance(viewOpt.toFixed(1)) },
                   ].map((item, i) => (
                     <div key={i} className="checklist-item">
                       <div className="checklist-dot" style={{ background: item.ok ? "#10b981" : "#f59e0b" }} />
@@ -1553,10 +1556,10 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
             {activeTab === "compare" && (
               <div>
                 <div style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:8, padding:"12px 14px", marginBottom:14 }}>
-                  <div className="section-label">Panneau B à comparer (mêmes dimensions)</div>
+                  <div className="section-label">{t.comparePanelB}</div>
                   <div className="product-select-wrap" style={{ marginBottom:6 }}>
                     <select className="product-select" value={brandFilter2} onChange={e => { setBrandFilter2(e.target.value); setSelIdx2(0); }}>
-                      <option value="all">Toutes les marques</option>
+                      <option value="all">{t.allBrands}</option>
                       {brands.filter(b => b !== "all").map(b => <option key={b} value={b}>{b}</option>)}
                     </select>
                     {chevron}
@@ -1573,8 +1576,8 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
 
                 <div className="compare-cols">
                   {[
-                    { sel: selected,  res: result,  tag: "A — Sélection" },
-                    { sel: selected2, res: result2, tag: "B — Comparé" },
+                    { sel: selected,  res: result,  tag: t.compareTagA },
+                    { sel: selected2, res: result2, tag: t.compareTagB },
                   ].map(({ sel, res, tag }, idx) => {
                     const other = idx === 0 ? result2 : result;
                     const otherSel = idx === 0 ? selected2 : selected;
@@ -1588,17 +1591,17 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
                         <table className="data-table" style={{ fontSize:11 }}>
                           <tbody>
                             {[
-                              { k:"Pitch",     v:`${sel.pixel_pitch_mm} mm`,      win: wins(sel.pixel_pitch_mm, otherSel.pixel_pitch_mm, true) },
-                              { k:"Luminosité",v:`${sel.nits} nits`,              win: wins(sel.nits, otherSel.nits, false) },
-                              { k:"Refresh",   v:`${sel.refresh_rate_hz} Hz`,     win: wins(sel.refresh_rate_hz, otherSel.refresh_rate_hz, false) },
-                              { k:"Type LED",  v:sel.type_led || "—",             win: false },
-                              { k:"Poids/u",   v:`${sel.weight_kgs} kg`,          win: wins(sel.weight_kgs, otherSel.weight_kgs, true) },
-                              { k:"Conso max/u",v:`${sel.power_max_w} W`,         win: wins(sel.power_max_w, otherSel.power_max_w, true) },
-                              { k:"───",       v:"─ Résultat config ─", sep:true },
-                              { k:"Panneaux",  v:`${res.panelsW}×${res.panelsH} = ${res.totalPanels}`, win: wins(res.totalPanels, other.totalPanels, true) },
-                              { k:"Résolution",v:`${res.resW}×${res.resH}`,       win: wins(res.totalPixels, other.totalPixels, false) },
-                              { k:"Conso moy.",v:`${Math.round(res.totalPowerAvg)} W`, win: wins(res.totalPowerAvg, other.totalPowerAvg, true) },
-                              { k:"Poids total",v:`${(res.totalPanels * sel.weight_kgs).toFixed(0)} kg`, win: wins(res.totalPanels * sel.weight_kgs, other.totalPanels * otherSel.weight_kgs, true) },
+                              { k:t.comparePitch,          v:`${sel.pixel_pitch_mm} mm`,      win: wins(sel.pixel_pitch_mm, otherSel.pixel_pitch_mm, true) },
+                              { k:t.compareLuminosity,     v:`${sel.nits} nits`,              win: wins(sel.nits, otherSel.nits, false) },
+                              { k:t.compareRefresh,        v:`${sel.refresh_rate_hz} Hz`,     win: wins(sel.refresh_rate_hz, otherSel.refresh_rate_hz, false) },
+                              { k:t.compareLedType,        v:sel.type_led || "—",             win: false },
+                              { k:t.compareWeightUnit,     v:`${sel.weight_kgs} kg`,          win: wins(sel.weight_kgs, otherSel.weight_kgs, true) },
+                              { k:t.compareMaxPowerUnit,   v:`${sel.power_max_w} W`,          win: wins(sel.power_max_w, otherSel.power_max_w, true) },
+                              { k:"───",                   v:t.compareSepLabel, sep:true },
+                              { k:t.comparePanelsRow,      v:`${res.panelsW}×${res.panelsH} = ${res.totalPanels}`, win: wins(res.totalPanels, other.totalPanels, true) },
+                              { k:t.compareResolutionRow,  v:`${res.resW}×${res.resH}`,       win: wins(res.totalPixels, other.totalPixels, false) },
+                              { k:t.compareAvgPowerRow,    v:`${Math.round(res.totalPowerAvg)} W`, win: wins(res.totalPowerAvg, other.totalPowerAvg, true) },
+                              { k:t.compareTotalWeightRow, v:`${(res.totalPanels * sel.weight_kgs).toFixed(0)} kg`, win: wins(res.totalPanels * sel.weight_kgs, other.totalPanels * otherSel.weight_kgs, true) },
                             ].map((row) => (
                               <tr key={row.k} className={row.sep ? "compare-separator" : row.win ? "compare-win" : ""}>
                                 <td>{row.k}</td><td>{row.v}</td>
@@ -1617,39 +1620,39 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
             {activeTab === "project" && (
               <div>
                 <button className="proj-add-btn" onClick={addToProject}>
-                  + Ajouter l'écran actuel au projet ({selected.panel_ref} · {totalWidth.toFixed(2)}×{totalHeight.toFixed(2)} m)
+                  {t.projAddBtn(selected.panel_ref, totalWidth.toFixed(2), totalHeight.toFixed(2))}
                 </button>
 
                 {projectScreens.length === 0 ? (
-                  <div className="proj-empty">Aucun écran dans le projet.<br />Configurez un écran puis cliquez sur "Ajouter".</div>
+                  <div className="proj-empty">{t.projEmpty.split("\n").map((l,i) => <span key={i}>{l}{i===0&&<br/>}</span>)}</div>
                 ) : (<>
                   {projectScreens.map((s, i) => (
                     <div key={s.id} className="proj-screen-item">
                       <div style={{ width:28, height:28, background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:5, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"var(--text-dim)", fontFamily:"var(--font-mono)", flexShrink:0 }}>{i+1}</div>
                       <div className="proj-screen-info">
                         <div className="proj-screen-name">{s.label}</div>
-                        <div className="proj-screen-sub">{s.panelsW}×{s.panelsH} cabinets · {s.resW}×{s.resH}px · {s.totalPowerAvg} W moy.</div>
+                        <div className="proj-screen-sub">{s.panelsW}×{s.panelsH} cabinets · {s.resW}×{s.resH}px · {s.totalPowerAvg} {t.projWAvg}</div>
                       </div>
                       <button className="btn-xs danger" onClick={() => removeFromProject(s.id)}>✕</button>
                     </div>
                   ))}
 
                   <div className="proj-total-box">
-                    <div className="proj-total-title">Totaux du projet</div>
+                    <div className="proj-total-title">{t.projTotalsTitle}</div>
                     <table className="data-table">
                       <tbody>
                         {[
-                          ["Écrans",           `${projectScreens.length}`],
-                          ["Cabinets total",   `${projectScreens.reduce((s,x) => s + x.totalPanels, 0)}`],
-                          ["Conso max totale", `${projectScreens.reduce((s,x) => s + x.totalPowerMax, 0)} W`],
-                          ["Conso moy. totale",`${projectScreens.reduce((s,x) => s + x.totalPowerAvg, 0)} W`],
-                          ["Poids total",      `${projectScreens.reduce((s,x) => s + parseFloat(x.totalWeight), 0).toFixed(1)} kg`],
+                          [t.projScreenCount,    `${projectScreens.length}`],
+                          [t.projCabinetTotal,   `${projectScreens.reduce((s,x) => s + x.totalPanels, 0)}`],
+                          [t.projMaxPowerTotal,  `${projectScreens.reduce((s,x) => s + x.totalPowerMax, 0)} W`],
+                          [t.projAvgPowerTotal,  `${projectScreens.reduce((s,x) => s + x.totalPowerAvg, 0)} W`],
+                          [t.projTotalWeight,    `${projectScreens.reduce((s,x) => s + parseFloat(x.totalWeight), 0).toFixed(1)} kg`],
                         ].map(([k, v]) => <tr key={k}><td>{k}</td><td>{v}</td></tr>)}
                       </tbody>
                     </table>
                     <button className="btn-xs danger" style={{ marginTop:12, width:"100%", textAlign:"center" }} onClick={() => {
                       setProjectScreens([]); localStorage.removeItem("led-project");
-                    }}>Vider le projet</button>
+                    }}>{t.projClear}</button>
                   </div>
                 </>)}
               </div>
@@ -1659,11 +1662,11 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
             {activeTab === "history" && (
               <div>
                 <button className="save-cfg-btn" onClick={saveConfig}>
-                  ＋ Sauvegarder la configuration actuelle ({selected.panel_ref} · {totalWidth.toFixed(2)}×{totalHeight.toFixed(2)} m)
+                  {t.histSaveBtn(selected.panel_ref, totalWidth.toFixed(2), totalHeight.toFixed(2))}
                 </button>
 
                 {savedConfigs.length === 0 ? (
-                  <div className="hist-empty">Aucune configuration sauvegardée.<br />Cliquez sur "Sauvegarder" pour en créer une.</div>
+                  <div className="hist-empty">{t.histEmpty.split("\n").map((l,i) => <span key={i}>{l}{i===0&&<br/>}</span>)}</div>
                 ) : (
                   savedConfigs.map(cfg => (
                     <div key={cfg.id} className="hist-item">
@@ -1672,7 +1675,7 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
                         <div className="hist-date">{cfg.date} · {cfg.summary}</div>
                       </div>
                       <div className="hist-actions">
-                        <button className="btn-xs primary" onClick={() => loadConfig(cfg)}>Charger</button>
+                        <button className="btn-xs primary" onClick={() => loadConfig(cfg)}>{t.histLoad}</button>
                         <button className="btn-xs danger"  onClick={() => deleteConfig(cfg.id)}>✕</button>
                       </div>
                     </div>

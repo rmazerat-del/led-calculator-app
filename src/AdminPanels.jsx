@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
+import { useLang, LangToggle } from "./LanguageContext";
 
 const css = `
   .admin-wrap { min-height: 100vh; background: #f5f5f7; font-family: -apple-system, 'Helvetica Neue', sans-serif; }
@@ -76,7 +77,8 @@ function parseCSV(text) {
   return { headers, rows };
 }
 
-export default function AdminPanels({ onBack }) {
+export default function AdminPanels({ onBack, onLogout }) {
+  const { t } = useLang();
   const [panels, setPanels]       = useState([]);
   const [loading, setLoading]     = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -219,7 +221,7 @@ if (editing) {
     if (error) {
       setAlert({ type: "error", msg: error.message });
     } else {
-      setAlert({ type: "success", msg: editing ? "Panneau mis à jour !" : "Panneau ajouté !" });
+      setAlert({ type: "success", msg: editing ? t.panelUpdated : t.panelAdded });
       await fetchPanels();
       setTimeout(closeModal, 800);
     }
@@ -285,21 +287,29 @@ if (editing) {
     <div className="admin-wrap">
       <div className="admin-topbar">
         <div>
-          <div className="admin-topbar-title">💡 LED Calculator</div>
-          <div className="admin-topbar-sub">Back-office · Panneaux</div>
+          <div className="admin-topbar-title">{t.adminTitle}</div>
+          <div className="admin-topbar-sub">{t.adminSub}</div>
         </div>
-        <button className="btn-secondary" onClick={onBack}>← Retour au calculateur</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <LangToggle />
+          <button className="btn-secondary" onClick={onBack}>{t.backToCalc}</button>
+          {onLogout && (
+            <button className="btn-danger" onClick={onLogout} style={{ fontSize: 12 }}>
+              Déconnexion
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="admin-content">
         <div className="admin-header-row">
-          <div className="admin-title">Gestion des panneaux LED</div>
+          <div className="admin-title">{t.managePanels}</div>
           <div style={{ display:"flex", gap:8 }}>
             <input ref={csvInputRef} type="file" accept=".csv,text/csv" style={{ display:"none" }} onChange={handleCSVFile} />
-            <button className="btn-secondary" onClick={downloadTemplate}>⬇ Modèle CSV</button>
-            <button className="btn-secondary" onClick={() => csvInputRef.current?.click()}>⬆ Import CSV</button>
-            <button className="btn-danger" onClick={purgeInactive}>🗑 Purger les inactifs</button>
-            <button className="btn-primary" onClick={openAdd}>+ Ajouter un panneau</button>
+            <button className="btn-secondary" onClick={downloadTemplate}>{t.csvTemplate}</button>
+            <button className="btn-secondary" onClick={() => csvInputRef.current?.click()}>{t.csvImport}</button>
+            <button className="btn-danger" onClick={purgeInactive}>{t.purgeInactive}</button>
+            <button className="btn-primary" onClick={openAdd}>{t.addPanel}</button>
           </div>
         </div>
         {alert && !showModal && (
@@ -307,26 +317,26 @@ if (editing) {
         )}
 
         {loading ? (
-          <div className="loading">Chargement…</div>
+          <div className="loading">{t.loading}</div>
         ) : panels.length === 0 ? (
-          <div className="empty">Aucun panneau trouvé</div>
+          <div className="empty">{t.noPanels}</div>
         ) : (
           <div className="table-wrap">
             <table className="panel-table">
               <thead>
                 <tr>
-                  <th>Marque</th>
-                  <th>Type LED</th>
-                  <th>Référence</th>
-                  <th>Série</th>
-                  <th>Pitch</th>
-                  <th>Résolution</th>
-                  <th>Dimensions</th>
-                  <th>Nits</th>
-                  <th>Conso max</th>
-                  <th>Poids</th>
-                  <th>Statut</th>
-                  <th>Actions</th>
+                  <th>{t.brand}</th>
+                  <th>{t.ledType}</th>
+                  <th>{t.reference}</th>
+                  <th>{t.serie}</th>
+                  <th>{t.pitch}</th>
+                  <th>{t.resolution}</th>
+                  <th>{t.dimensions}</th>
+                  <th>{t.nits}</th>
+                  <th>{t.maxPower}</th>
+                  <th>{t.weight}</th>
+                  <th>{t.status}</th>
+                  <th>{t.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -344,16 +354,16 @@ if (editing) {
                     <td>{p.weight_kgs} kg</td>
                     <td>
                       <span className={p.is_active ? "badge-active" : "badge-inactive"}>
-                        {p.is_active ? "Actif" : "Inactif"}
+                        {p.is_active ? t.active : t.inactive}
                       </span>
                     </td>
                     <td>
                       <div className="actions-row">
-                        <button className="btn-secondary" onClick={() => openEdit(p)}>Modifier</button>
+                        <button className="btn-secondary" onClick={() => openEdit(p)}>{t.edit}</button>
                         <button className="btn-danger" onClick={() => toggleActive(p)}>
-                          {p.is_active ? "Désactiver" : "Activer"}
+                          {p.is_active ? t.disable : t.enable}
                         </button>
-                        <button className="btn-delete" onClick={() => deletePanel(p)}>Suppr.</button>
+                        <button className="btn-delete" onClick={() => deletePanel(p)}>{t.deleteShort}</button>
                       </div>
                     </td>
                   </tr>
@@ -367,10 +377,10 @@ if (editing) {
       {showCSV && (
         <div className="modal-bg" onClick={() => setShowCSV(false)}>
           <div className="modal" style={{ width:700 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-title">Import CSV — Aperçu</div>
+            <div className="modal-title">{t.importPreview}</div>
             <div style={{ fontSize:12, color:"#6e6e73", marginBottom:8 }}>
-              {csvRows.filter(r => !r._error).length} valide(s) · {csvRows.filter(r => r._error).length} erreur(s). Les lignes en rouge seront ignorées.
-              Les entrées existantes (même <code>panel_ref</code>) seront mises à jour.
+              {t.validRows(csvRows.filter(r => !r._error).length)} · {t.errorRows(csvRows.filter(r => r._error).length)}. {t.redRowsIgnored}
+              {" "}{t.existingUpdated}
             </div>
             {csvRows.some(r => r._converted) && (
               <div style={{ fontSize:12, background:"rgba(255,149,0,0.1)", color:"#c45e00", padding:"8px 12px", borderRadius:8, marginBottom:8, fontWeight:600 }}>
@@ -383,13 +393,13 @@ if (editing) {
               </div>
             )}
             <div style={{ fontSize:11, color:"#6e6e73", marginBottom:10 }}>
-              Format CSV attendu — colonnes : <code>{CSV_COLUMNS.join(", ")}</code>
+              {t.csvFormat} <code>{CSV_COLUMNS.join(", ")}</code>
             </div>
             <div className="csv-preview">
               <table>
                 <thead><tr>
                   {["panel_ref","marque","type_led","pixel_pitch_mm","nits","power_max_w","weight_kgs"].map(h => <th key={h}>{h}</th>)}
-                  <th>Statut</th>
+                  <th>{t.status}</th>
                 </tr></thead>
                 <tbody>
                   {csvRows.map((r, i) => (
@@ -405,10 +415,10 @@ if (editing) {
                         {r._error
                           ? <span style={{color:"#ff3b30",fontWeight:700}}>⚠ {r._errorMsg || "Erreur"}</span>
                           : r._converted
-                            ? <span style={{color:"#ff9500",fontWeight:600}}>↔ Dim. converties</span>
+                            ? <span style={{color:"#ff9500",fontWeight:600}}>{t.dimsConverted}</span>
                             : r._dupRef
-                              ? <span style={{color:"#ff9500",fontWeight:600}}>⚠ Réf. dupliquée</span>
-                              : <span style={{color:"#34c759",fontWeight:600}}>✓ OK</span>
+                              ? <span style={{color:"#ff9500",fontWeight:600}}>{t.dupRef}</span>
+                              : <span style={{color:"#34c759",fontWeight:600}}>{t.okStatus}</span>
                         }
                       </td>
                     </tr>
@@ -417,9 +427,9 @@ if (editing) {
               </table>
             </div>
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setShowCSV(false)}>Annuler</button>
+              <button className="btn-secondary" onClick={() => setShowCSV(false)}>{t.cancel}</button>
               <button className="btn-primary" onClick={handleCSVImport} disabled={csvImporting || csvRows.filter(r => !r._error).length === 0}>
-                {csvImporting ? "Import en cours…" : `Importer ${csvRows.filter(r => !r._error).length} panneau(x)`}
+                {csvImporting ? t.importing : t.importBtn(csvRows.filter(r => !r._error).length)}
               </button>
             </div>
           </div>
@@ -429,28 +439,28 @@ if (editing) {
       {showModal && (
         <div className="modal-bg" onClick={closeModal}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">{editing ? "Modifier le panneau" : "Ajouter un panneau"}</div>
+            <div className="modal-title">{editing ? t.editPanel : t.addPanelModal}</div>
             {alert && (
               <div className={alert.type === "success" ? "alert-success" : "alert-error"}>{alert.msg}</div>
             )}
             <div className="form-grid">
               {[
-                { name:"marque",               label:"Marque",             full:false },
-                { name:"type_led",             label:"Type LED",           full:false },
-                { name:"brand",                label:"Série",              full:false },
-                { name:"panel_ref",            label:"Référence",          full:false },
-                { name:"pixel_pitch_mm",       label:"Pitch pixel (mm)" },
-                { name:"nits",                 label:"Luminosité (nits)" },
-                { name:"resolution_w",         label:"Résolution largeur" },
-                { name:"resolution_h",         label:"Résolution hauteur" },
-                { name:"panel_width_m",        label:"Largeur cabinet (m)" },
-                { name:"panel_height_m",       label:"Hauteur cabinet (m)" },
-                { name:"weight_kgs",           label:"Poids (kg)" },
-                { name:"power_max_w",          label:"Conso max (W)" },
-                { name:"power_avg_w",          label:"Conso moy. (W)" },
-                { name:"refresh_rate_hz",      label:"Refresh rate (Hz)" },
-                { name:"rj45_capacity",        label:"Capacité RJ45 (px)" },
-                { name:"power_cable_capacity", label:"Cap. câble élec. (W)" },
+                { name:"marque",               label: t.brand,         full:false },
+                { name:"type_led",             label: t.ledType,       full:false },
+                { name:"brand",                label: t.serie,         full:false },
+                { name:"panel_ref",            label: t.reference,     full:false },
+                { name:"pixel_pitch_mm",       label: t.pixelPitch },
+                { name:"nits",                 label: t.brightness },
+                { name:"resolution_w",         label: t.resWidth },
+                { name:"resolution_h",         label: t.resHeight },
+                { name:"panel_width_m",        label: t.cabinetWidth },
+                { name:"panel_height_m",       label: t.cabinetHeight },
+                { name:"weight_kgs",           label: t.weightKg },
+                { name:"power_max_w",          label: t.maxPowerW },
+                { name:"power_avg_w",          label: t.avgPowerW },
+                { name:"refresh_rate_hz",      label: t.refreshRate },
+                { name:"rj45_capacity",        label: t.rj45Cap },
+                { name:"power_cable_capacity", label: t.elecCap },
               ].map(f => (
                 <div key={f.name} className={`form-group${f.full ? " full" : ""}`}>
                   <label className="form-label">{f.label}</label>
@@ -465,18 +475,18 @@ if (editing) {
                 </div>
               ))}
               <div className="form-group full">
-                <label className="form-label">Notes</label>
+                <label className="form-label">{t.notes}</label>
                 <input className="form-input" name="notes" value={form.notes || ""} onChange={handleChange} />
               </div>
               <div className="form-group" style={{flexDirection:"row", alignItems:"center", gap:10}}>
                 <input type="checkbox" name="is_active" checked={form.is_active} onChange={handleChange} id="is_active" />
-                <label htmlFor="is_active" className="form-label" style={{margin:0}}>Panneau actif</label>
+                <label htmlFor="is_active" className="form-label" style={{margin:0}}>{t.panelActive}</label>
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={closeModal}>Annuler</button>
+              <button className="btn-secondary" onClick={closeModal}>{t.cancel}</button>
               <button className="btn-primary" onClick={handleSave} disabled={saving}>
-                {saving ? "Enregistrement…" : "Enregistrer"}
+                {saving ? t.saving : t.save}
               </button>
             </div>
           </div>

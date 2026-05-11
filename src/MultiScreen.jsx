@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
+import { useLang, LangToggle } from "./LanguageContext";
 
 // ── Algorithm (identical to PanelMixer) ────────────────────────────────────
 
@@ -52,10 +53,10 @@ function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
           if (!valid) break;
         }
         if (!valid || !layout.length) continue;
-        const totalPanels   = layout.reduce((s, t) => s + t.count, 0);
-        const totalWeight   = layout.reduce((s, t) => s + t.count * (t.panel.weight_kgs || 0), 0);
-        const totalPowerMax = layout.reduce((s, t) => s + t.count * (t.panel.power_max_w || 0), 0);
-        const totalPowerAvg = layout.reduce((s, t) => s + t.count * (t.panel.power_avg_w || 0), 0);
+        const totalPanels   = layout.reduce((s, tile) => s + tile.count, 0);
+        const totalWeight   = layout.reduce((s, tile) => s + tile.count * (tile.panel.weight_kgs || 0), 0);
+        const totalPowerMax = layout.reduce((s, tile) => s + tile.count * (tile.panel.power_max_w || 0), 0);
+        const totalPowerAvg = layout.reduce((s, tile) => s + tile.count * (tile.panel.power_avg_w || 0), 0);
         const totalPixW = Object.entries(wc.combo).reduce((s, [ws, wn]) => {
           const p = pList.find(p => roundMm(p.panel_width_m) === parseInt(ws));
           return s + (p ? p.resolution_w * parseInt(wn) : 0);
@@ -70,7 +71,7 @@ function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
     }
     return sols;
   }
-  const solKey = sol => sol.layout.map(t => `${t.wMm}x${t.hMm}:${t.cols}x${t.rows}`).sort().join("|");
+  const solKey = sol => sol.layout.map(tile => `${tile.wMm}x${tile.hMm}:${tile.cols}x${tile.rows}`).sort().join("|");
   const portraitPanels = panels.filter(p => roundMm(p.panel_height_m) > roundMm(p.panel_width_m));
   let portraitSols = [];
   if (portraitPanels.length > 0) {
@@ -80,7 +81,7 @@ function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
   const portraitKeys = new Set(portraitSols.map(solKey));
   const allSols = buildSolutions(panels);
   const mixedSols = allSols.filter(s => !portraitKeys.has(solKey(s)));
-  const maxArea = sol => Math.max(...sol.layout.map(t => t.wMm * t.hMm));
+  const maxArea = sol => Math.max(...sol.layout.map(tile => tile.wMm * tile.hMm));
   return [...portraitSols, ...mixedSols]
     .sort((a, b) =>
       maxArea(a) !== maxArea(b) ? maxArea(b) - maxArea(a) :
@@ -93,7 +94,7 @@ function solvePanelMix(panels, targetW_mm, targetH_mm, toleranceMm) {
 
 // ── Diagram helpers ─────────────────────────────────────────────────────────
 
-function generateDiagramSVG(solved) {
+function generateDiagramSVG(solved, panAbbr) {
   const MAX_H = 160, GAP = 28, PAD = 16, LABEL_H = 26, DIM_H = 18;
   const C = ["#0071e3","#34c759","#ff9500","#af52de","#ff3b30","#00b4d8","#f72585"];
   const maxH_mm = Math.max(...solved.map(s => s.solution.actualH));
@@ -142,7 +143,7 @@ function generateDiagramSVG(solved) {
     parts.push(`<text x="${(x0+11).toFixed(1)}" y="${(PAD+17).toFixed(1)}" text-anchor="middle" fill="white" font-size="10" font-weight="800" font-family="Arial,sans-serif">${idx+1}</text>`);
     const nameText = s.name.length > 18 ? s.name.slice(0,16)+'…' : s.name;
     parts.push(`<text x="${(x0+26).toFixed(1)}" y="${(PAD+17).toFixed(1)}" fill="${color}" font-size="11" font-weight="700" font-family="Arial,sans-serif">${nameText}</text>`);
-    parts.push(`<text x="${(x0+gridW/2).toFixed(1)}" y="${(y0+gridH+13).toFixed(1)}" text-anchor="middle" fill="#555" font-size="9" font-family="Arial,sans-serif">${(sol.actualW/1000).toFixed(2)}×${(sol.actualH/1000).toFixed(2)} m · ${sol.totalPanels} pan.</text>`);
+    parts.push(`<text x="${(x0+gridW/2).toFixed(1)}" y="${(y0+gridH+13).toFixed(1)}" text-anchor="middle" fill="#555" font-size="9" font-family="Arial,sans-serif">${(sol.actualW/1000).toFixed(2)}×${(sol.actualH/1000).toFixed(2)} m · ${sol.totalPanels} ${panAbbr}</text>`);
     return parts.join('');
   });
 
@@ -152,7 +153,7 @@ function generateDiagramSVG(solved) {
 
 // ── PDF Export ──────────────────────────────────────────────────────────────
 
-async function exportMultiScreenPDF(screens) {
+async function exportMultiScreenPDF(screens, t) {
   const date = new Date().toLocaleDateString("fr-FR");
   const solved = screens
     .filter(s => s.solutions?.length > 0)
@@ -179,35 +180,35 @@ async function exportMultiScreenPDF(screens) {
     const badgeStyle = sol.waste === 0
       ? "background:#d4edda;color:#155724"
       : "background:#fff3cd;color:#856404";
-    const rows = sol.layout.map(t => `<tr>
-      <td style="${T()}">${t.panel.panel_ref}</td>
-      <td style="${T()}">${t.panel.marque||"—"}</td>
-      <td style="${T()}">${t.panel.pixel_pitch_mm} mm</td>
-      <td style="${T()}">${t.wMm}×${t.hMm} mm</td>
-      <td style="${T()}">${t.cols} col. × ${t.rows} rang${t.rows>1?"s":""}</td>
-      <td style="${T("font-weight:700;color:#0071e3")}">${t.count}</td>
-      <td style="${T()}">${(t.count*(t.panel.weight_kgs||0)).toFixed(1)} kg</td>
-      <td style="${T()}">${(t.count*(t.panel.power_max_w||0)).toFixed(0)} W</td>
+    const rows = sol.layout.map(tile => `<tr>
+      <td style="${T()}">${tile.panel.panel_ref}</td>
+      <td style="${T()}">${tile.panel.marque||"—"}</td>
+      <td style="${T()}">${tile.panel.pixel_pitch_mm} mm</td>
+      <td style="${T()}">${tile.wMm}×${tile.hMm} mm</td>
+      <td style="${T()}">${tile.cols} col. × ${tile.rows} rang${tile.rows>1?"s":""}</td>
+      <td style="${T("font-weight:700;color:#0071e3")}">${tile.count}</td>
+      <td style="${T()}">${(tile.count*(tile.panel.weight_kgs||0)).toFixed(1)} kg</td>
+      <td style="${T()}">${(tile.count*(tile.panel.power_max_w||0)).toFixed(0)} W</td>
     </tr>`).join("");
     return `<div style="${idx>0?"margin-top:36px;padding-top:20px;border-top:2px solid #ddd;":""}">
-      <h2 style="${H2}">Écran ${idx+1} — ${s.name}</h2>
+      <h2 style="${H2}">${t.screenSection(idx+1, s.name)}</h2>
       <p style="color:#555;font-size:12px;margin:0 0 12px">
-        Cible : <b>${parseFloat(s.targetW).toFixed(3)} m × ${parseFloat(s.targetH).toFixed(3)} m</b> &nbsp;·&nbsp;
-        Réel : <b>${(sol.actualW/1000).toFixed(3)} m × ${(sol.actualH/1000).toFixed(3)} m</b> &nbsp;·&nbsp;
-        <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;${badgeStyle}">${sol.waste===0?"✓ Ajustement parfait":`±${sol.waste}mm d'écart`}</span>
+        ${t.targetLabelMs} <b>${parseFloat(s.targetW).toFixed(3)} m × ${parseFloat(s.targetH).toFixed(3)} m</b> &nbsp;·&nbsp;
+        ${t.realLabelMs} <b>${(sol.actualW/1000).toFixed(3)} m × ${(sol.actualH/1000).toFixed(3)} m</b> &nbsp;·&nbsp;
+        <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;${badgeStyle}">${sol.waste===0 ? t.perfectFit : t.deviation(sol.waste)}</span>
       </p>
       <div style="display:flex;gap:8px;margin-bottom:14px">
-        ${BOX("Panneaux",sol.totalPanels,`${sol.types} type${sol.types>1?"s":""}`)}
-        ${BOX("Résolution",`${sol.totalPixW}×${sol.totalPixH}`,`${((sol.totalPixW*sol.totalPixH)/1e6).toFixed(1)} Mpx`)}
-        ${BOX("Poids",`${sol.totalWeight.toFixed(1)} kg`)}
-        ${BOX("Conso max",`${(sol.totalPowerMax/1000).toFixed(2)} kW`,`Moy : ${(sol.totalPowerAvg/1000).toFixed(2)} kW`)}
+        ${BOX(t.panelsLabel, sol.totalPanels, `${sol.types} type${sol.types>1?"s":""}`)}
+        ${BOX(t.resolution, `${sol.totalPixW}×${sol.totalPixH}`, `${((sol.totalPixW*sol.totalPixH)/1e6).toFixed(1)} Mpx`)}
+        ${BOX(t.weight, `${sol.totalWeight.toFixed(1)} kg`)}
+        ${BOX(t.maxPower, `${(sol.totalPowerMax/1000).toFixed(2)} kW`, `${t.avg} ${(sol.totalPowerAvg/1000).toFixed(2)} kW`)}
       </div>
-      <h3 style="${H3}">Détail des panneaux</h3>
+      <h3 style="${H3}">${t.panelDetail}</h3>
       <table style="width:100%;border-collapse:collapse;margin-bottom:10px">
         <thead><tr>
-          <th style="${TH()}">Référence</th><th style="${TH()}">Marque</th><th style="${TH()}">Pitch</th>
-          <th style="${TH()}">Dimensions</th><th style="${TH()}">Disposition</th>
-          <th style="${TH()}">Qté</th><th style="${TH()}">Poids</th><th style="${TH()}">Conso max</th>
+          <th style="${TH()}">${t.reference}</th><th style="${TH()}">${t.brand}</th><th style="${TH()}">${t.pitch}</th>
+          <th style="${TH()}">${t.dimensions}</th><th style="${TH()}">${t.layout}</th>
+          <th style="${TH()}">${t.qty}</th><th style="${TH()}">${t.weight}</th><th style="${TH()}">${t.maxPower}</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -222,7 +223,7 @@ async function exportMultiScreenPDF(screens) {
       <td style="${T()}">${parseFloat(s.targetW).toFixed(3)} × ${parseFloat(s.targetH).toFixed(3)} m</td>
       <td style="${T()}">${(sol.actualW/1000).toFixed(3)} × ${(sol.actualH/1000).toFixed(3)} m</td>
       <td style="${T("font-weight:700;color:#0071e3")}">${sol.totalPanels}</td>
-      <td style="${T("font-size:10px")}">${sol.layout.map(t=>`<b>${t.panel.panel_ref}</b> ×${t.count}`).join("<br>")}</td>
+      <td style="${T("font-size:10px")}">${sol.layout.map(tile=>`<b>${tile.panel.panel_ref}</b> ×${tile.count}`).join("<br>")}</td>
       <td style="${T()}">${sol.totalPixW}×${sol.totalPixH}</td>
       <td style="${T()}">${sol.totalWeight.toFixed(1)} kg</td>
       <td style="${T()}">${(sol.totalPowerMax/1000).toFixed(2)} kW</td>
@@ -234,31 +235,31 @@ async function exportMultiScreenPDF(screens) {
   const container = document.createElement('div');
   container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;padding:40px;box-sizing:border-box;font-family:Arial,sans-serif;font-size:12px;color:#000;';
   container.innerHTML = `
-    <h1 style="font-size:20px;font-weight:700;margin:0 0 4px">Installation Multi-Écrans LED</h1>
-    <p style="color:#555;font-size:12px;margin:0 0 24px"><b>${solved.length} écran${solved.length>1?"s":""}</b> · Généré le ${date}</p>
+    <h1 style="font-size:20px;font-weight:700;margin:0 0 4px">${t.msPdfTitle}</h1>
+    <p style="color:#555;font-size:12px;margin:0 0 24px"><b>${solved.length} ${t.screensLabel}${solved.length>1?"s":""}</b> · ${t.generatedOn(date)}</p>
     ${screenSections.join("")}
     <div style="margin-top:36px;padding-top:20px;border-top:3px solid #0071e3">
-      <h2 style="${H2}">Synthèse de l'installation</h2>
+      <h2 style="${H2}">${t.synthSection}</h2>
       <div style="display:flex;gap:8px;margin-bottom:16px">
-        ${BOX("Écrans",solved.length)}
-        ${BOX("Panneaux total",`<span style="color:#0071e3">${totalPanels}</span>`)}
-        ${BOX("Poids total",`${totalWeight.toFixed(1)} kg`)}
-        ${BOX("Conso max totale",`${(totalPowerMax/1000).toFixed(2)} kW`,`Moy : ${(totalPowerAvg/1000).toFixed(2)} kW`)}
+        ${BOX(t.screensLabel, solved.length)}
+        ${BOX(t.panelsTotal, `<span style="color:#0071e3">${totalPanels}</span>`)}
+        ${BOX(t.totalWeightLabel, `${totalWeight.toFixed(1)} kg`)}
+        ${BOX(t.maxPowerTotal, `${(totalPowerMax/1000).toFixed(2)} kW`, `${t.avg} ${(totalPowerAvg/1000).toFixed(2)} kW`)}
       </div>
-      <h3 style="${H3}">Représentation à l'échelle</h3>
+      <h3 style="${H3}">${t.scaleRepresentation}</h3>
       <div style="background:#f9f9fb;border-radius:8px;padding:16px;margin-bottom:16px;border:1px solid #e0e0e0">
-        ${generateDiagramSVG(solved)}
+        ${generateDiagramSVG(solved, t.panAbbr)}
       </div>
-      <h3 style="${H3}">Récapitulatif par écran</h3>
+      <h3 style="${H3}">${t.summaryByScreen}</h3>
       <table style="width:100%;border-collapse:collapse;margin-bottom:10px">
         <thead><tr>
-          ${["#","Écran","Dim. cible","Dim. réelle","Panneaux","Modèles","Résolution","Poids","Conso max","Conso moy."].map(h=>`<th style="${TH()}">${h}</th>`).join("")}
+          ${["#", t.screenCol, t.targetDimCol, t.realDimCol, t.panelsCol, t.modelsUsed, t.resolution, t.weight, t.maxPower, t.consoMoyLabel].map(h=>`<th style="${TH()}">${h}</th>`).join("")}
         </tr></thead>
         <tbody>${synthRows}</tbody>
         <tfoot><tr style="font-weight:700;background:#f0f7ff">
-          <td style="padding:7px 8px;border-top:2px solid #0071e3" colspan="4">TOTAL</td>
+          <td style="padding:7px 8px;border-top:2px solid #0071e3" colspan="4">${t.total}</td>
           <td style="padding:7px 8px;border-top:2px solid #0071e3">${totalPanels}</td>
-          <td style="padding:7px 8px;border-top:2px solid #0071e3;font-size:10px">${[...new Set(solved.flatMap(sc=>sc.solution.layout.map(t=>t.panel.panel_ref)))].join(", ")}</td>
+          <td style="padding:7px 8px;border-top:2px solid #0071e3;font-size:10px">${[...new Set(solved.flatMap(sc=>sc.solution.layout.map(tile=>tile.panel.panel_ref)))].join(", ")}</td>
           <td style="padding:7px 8px;border-top:2px solid #0071e3">${(solved.reduce((s,sc)=>s+sc.solution.totalPixW*sc.solution.totalPixH,0)/1e6).toFixed(1)} Mpx</td>
           <td style="padding:7px 8px;border-top:2px solid #0071e3">${totalWeight.toFixed(1)} kg</td>
           <td style="padding:7px 8px;border-top:2px solid #0071e3">${(totalPowerMax/1000).toFixed(2)} kW</td>
@@ -267,7 +268,7 @@ async function exportMultiScreenPDF(screens) {
       </table>
     </div>
     <div style="margin-top:32px;border-top:1px solid #ccc;padding-top:6px;color:#999;font-size:10px">
-      Généré le ${date} · LED Calculator — Installation Multi-Écrans
+      ${t.msPdfFooter(date)}
     </div>`;
   document.body.appendChild(container);
   await new Promise(r => setTimeout(r, 400));
@@ -417,6 +418,7 @@ const makeScreen = (n) => ({
 // ── InstallationDiagram sub-component ───────────────────────────────────────
 
 function InstallationDiagram({ solvedScreens }) {
+  const { t } = useLang();
   if (!solvedScreens.length) return null;
   const MAX_H = 160;
   const maxH_mm = Math.max(...solvedScreens.map(s => s.solution.actualH));
@@ -425,7 +427,7 @@ function InstallationDiagram({ solvedScreens }) {
   return (
     <div style={{ background: '#f9f9fb', borderRadius: 10, padding: '16px', marginBottom: 24, border: '1px solid rgba(0,0,0,.06)', overflowX: 'auto' }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: '#aeaeb2', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 14 }}>
-        Quadrillage des panneaux — à l'échelle
+        {t.panelGrid}
       </div>
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-end', minWidth: 'min-content' }}>
         {solvedScreens.map((s, idx) => {
@@ -473,7 +475,7 @@ function InstallationDiagram({ solvedScreens }) {
                 ))}
               </div>
               <div style={{ fontSize: 11, color: '#6e6e73', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                {(sol.actualW / 1000).toFixed(2)} × {(sol.actualH / 1000).toFixed(2)} m · {sol.totalPanels} pan.
+                {(sol.actualW / 1000).toFixed(2)} × {(sol.actualH / 1000).toFixed(2)} m · {sol.totalPanels} {t.panAbbr}
               </div>
             </div>
           );
@@ -486,35 +488,36 @@ function InstallationDiagram({ solvedScreens }) {
 // ── ScreenSolution sub-component ────────────────────────────────────────────
 
 function ScreenSolution({ sol }) {
+  const { t } = useLang();
   return (
     <div className="ms-solution">
       <div className="ms-sol-header">
         <span className={`ms-waste-badge ${sol.waste === 0 ? "perfect" : "good"}`}>
-          {sol.waste === 0 ? "✓ Ajustement parfait" : `±${sol.waste} mm d'écart`}
+          {sol.waste === 0 ? t.perfectFit : t.deviation(sol.waste)}
         </span>
         <span className="ms-sol-dims">
-          {(sol.actualW/1000).toFixed(3)} m × {(sol.actualH/1000).toFixed(3)} m réels
+          {(sol.actualW/1000).toFixed(3)} m × {(sol.actualH/1000).toFixed(3)} m {t.actualSuffix}
           &nbsp;·&nbsp; {sol.totalPixW}×{sol.totalPixH} px
         </span>
       </div>
       <div className="ms-sol-panels">
-        {sol.layout.map((t, i) => (
+        {sol.layout.map((tile, i) => (
           <div key={i} className="ms-sol-panel-row">
             <div className="ms-sol-panel-dot" style={{ background: COLORS[i % COLORS.length] }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <span className="ms-sol-panel-name">{t.panel.panel_ref}</span>
-              <span className="ms-sol-panel-dim"> · {t.wMm}×{t.hMm} mm · {t.cols} col. × {t.rows} rang{t.rows > 1 ? "s" : ""}{t.panel.marque ? ` · ${t.panel.marque}` : ""}</span>
+              <span className="ms-sol-panel-name">{tile.panel.panel_ref}</span>
+              <span className="ms-sol-panel-dim"> · {tile.wMm}×{tile.hMm} mm · {tile.cols} col. × {tile.rows} rang{tile.rows > 1 ? "s" : ""}{tile.panel.marque ? ` · ${tile.panel.marque}` : ""}</span>
             </div>
-            <div className="ms-sol-panel-count">{t.count}×</div>
+            <div className="ms-sol-panel-count">{tile.count}×</div>
           </div>
         ))}
       </div>
       <div className="ms-sol-specs">
         {[
-          { label: "Panneaux", val: `${sol.totalPanels} (${sol.types} type${sol.types > 1 ? "s" : ""})` },
-          { label: "Résolution", val: `${sol.totalPixW}×${sol.totalPixH}` },
-          { label: "Poids", val: `${sol.totalWeight.toFixed(1)} kg` },
-          { label: "Conso max", val: `${(sol.totalPowerMax/1000).toFixed(2)} kW` },
+          { label: t.panels, val: `${sol.totalPanels} (${sol.types} type${sol.types > 1 ? "s" : ""})` },
+          { label: t.resolution, val: `${sol.totalPixW}×${sol.totalPixH}` },
+          { label: t.weight, val: `${sol.totalWeight.toFixed(1)} kg` },
+          { label: t.maxPower, val: `${(sol.totalPowerMax/1000).toFixed(2)} kW` },
         ].map((item, i) => (
           <div key={i} className="ms-sol-spec">
             <div className="ms-sol-spec-label">{item.label}</div>
@@ -529,6 +532,7 @@ function ScreenSolution({ sol }) {
 // ── ScreenCard sub-component ────────────────────────────────────────────────
 
 function ScreenCard({ screen, idx, brands, allPanels, onUpdate, onSolve, onRemove }) {
+  const { t } = useLang();
   const pitches = [...new Set(
     allPanels
       .filter(p => !screen.filterBrand || p.marque === screen.filterBrand)
@@ -552,11 +556,11 @@ function ScreenCard({ screen, idx, brands, allPanels, onUpdate, onSolve, onRemov
             className="ms-name-input"
             value={screen.name}
             onChange={e => onUpdate({ name: e.target.value })}
-            placeholder="Nom de l'écran"
+            placeholder={t.screenName}
           />
         </div>
         {onRemove && (
-          <button className="ms-remove-btn" onClick={onRemove}>✕ Supprimer</button>
+          <button className="ms-remove-btn" onClick={onRemove}>{t.removeScreen}</button>
         )}
       </div>
 
@@ -564,17 +568,17 @@ function ScreenCard({ screen, idx, brands, allPanels, onUpdate, onSolve, onRemov
       <div className="ms-screen-filters">
         <select className="ms-select" style={{ width: "auto" }} value={screen.filterBrand}
           onChange={e => onUpdate({ filterBrand: e.target.value, filterPitch: "", solution: null, noSolution: false })}>
-          <option value="">Toutes les marques</option>
+          <option value="">{t.allBrands}</option>
           {brands.map(b => <option key={b} value={b}>{b}</option>)}
         </select>
         <select className="ms-select" style={{ width: "auto" }} value={screen.filterPitch}
           onChange={e => onUpdate({ filterPitch: e.target.value, solution: null, noSolution: false })}>
-          <option value="">Tous les pitches</option>
+          <option value="">{t.allPitches}</option>
           {pitches.map(p => <option key={p} value={p}>{p} mm</option>)}
         </select>
         {activePanels.length > 0 && (
           <span style={{ fontSize: 12, color: "#aeaeb2", alignSelf: "center" }}>
-            {activePanels.length} panneau{activePanels.length > 1 ? "x" : ""} disponible{activePanels.length > 1 ? "s" : ""}
+            {t.panelsAvailable(activePanels.length)}
           </span>
         )}
       </div>
@@ -582,7 +586,7 @@ function ScreenCard({ screen, idx, brands, allPanels, onUpdate, onSolve, onRemov
       {/* Dimensions */}
       <div className="ms-screen-dims">
         <div className="ms-form-group">
-          <label className="ms-label">Largeur <span style={{ color: "#aeaeb2", fontWeight: 400 }}>(m)</span></label>
+          <label className="ms-label">{t.widthM} <span style={{ color: "#aeaeb2", fontWeight: 400 }}>(m)</span></label>
           <div className="ms-input-wrap">
             <input className="ms-input" type="number" step="0.001" min="0.1" max="50"
               placeholder="ex : 5.75"
@@ -592,7 +596,7 @@ function ScreenCard({ screen, idx, brands, allPanels, onUpdate, onSolve, onRemov
           </div>
         </div>
         <div className="ms-form-group">
-          <label className="ms-label">Hauteur <span style={{ color: "#aeaeb2", fontWeight: 400 }}>(m)</span></label>
+          <label className="ms-label">{t.heightM} <span style={{ color: "#aeaeb2", fontWeight: 400 }}>(m)</span></label>
           <div className="ms-input-wrap">
             <input className="ms-input" type="number" step="0.001" min="0.1" max="30"
               placeholder="ex : 2.75"
@@ -602,10 +606,10 @@ function ScreenCard({ screen, idx, brands, allPanels, onUpdate, onSolve, onRemov
           </div>
         </div>
         <div className="ms-form-group">
-          <label className="ms-label">Tolérance</label>
+          <label className="ms-label">{t.toleranceMs}</label>
           <select className="ms-select" value={screen.tolerance}
             onChange={e => onUpdate({ tolerance: e.target.value, solution: null, noSolution: false })}>
-            <option value="0">Exacte — 0 mm</option>
+            <option value="0">{t.tolExactMs}</option>
             <option value="10">±10 mm</option>
             <option value="25">±25 mm</option>
             <option value="50">±50 mm</option>
@@ -614,7 +618,7 @@ function ScreenCard({ screen, idx, brands, allPanels, onUpdate, onSolve, onRemov
         </div>
         <div className="ms-form-group" style={{ justifyContent: "flex-end" }}>
           <button className="ms-btn-solve" disabled={!canSolve || screen.solving} onClick={onSolve}>
-            {screen.solving ? "⏳ Calcul…" : "🔍 Calculer"}
+            {screen.solving ? t.calculatingMs : t.calculateMs}
           </button>
         </div>
       </div>
@@ -622,7 +626,7 @@ function ScreenCard({ screen, idx, brands, allPanels, onUpdate, onSolve, onRemov
       {/* Result */}
       {screen.noSolution && !screen.solving && (
         <div className="ms-no-sol">
-          Aucune combinaison valide — augmentez la tolérance ou ajoutez des panneaux au catalogue
+          {t.noSolution}
         </div>
       )}
       {screen.solutions?.length > 0 && (() => {
@@ -637,7 +641,7 @@ function ScreenCard({ screen, idx, brands, allPanels, onUpdate, onSolve, onRemov
                   onClick={() => onUpdate({ chosenSolIdx: screen.chosenSolIdx - 1 })}
                 >‹</button>
                 <span className="ms-sol-nav-label">
-                  Solution {screen.chosenSolIdx + 1}
+                  {t.solutionNav} {screen.chosenSolIdx + 1}
                   <span className="ms-sol-nav-count">/ {screen.solutions.length}</span>
                 </span>
                 <button
@@ -658,6 +662,7 @@ function ScreenCard({ screen, idx, brands, allPanels, onUpdate, onSolve, onRemov
 // ── Main component ──────────────────────────────────────────────────────────
 
 export default function MultiScreen({ onBack }) {
+  const { t } = useLang();
   const [allPanels, setAllPanels] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [screens, setScreens]     = useState(() => [makeScreen(1)]);
@@ -712,33 +717,34 @@ export default function MultiScreen({ onBack }) {
       {/* Topbar */}
       <div className="ms-topbar">
         <div className="ms-topbar-left">
-          <button className="ms-back-btn" onClick={() => onBack && onBack()}>← Retour</button>
+          <button className="ms-back-btn" onClick={() => onBack && onBack()}>{t.back}</button>
           <div>
-            <div className="ms-topbar-title">📺 Multi-Écrans</div>
-            <div className="ms-topbar-sub">Configuration d'installation</div>
+            <div className="ms-topbar-title">{t.msTitle}</div>
+            <div className="ms-topbar-sub">{t.msSub}</div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button className="ms-btn-add" onClick={addScreen}>+ Ajouter un écran</button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <LangToggle />
+          <button className="ms-btn-add" onClick={addScreen}>{t.addScreen}</button>
           <button
             className="ms-btn-pdf"
-            onClick={() => exportMultiScreenPDF(screens)}
+            onClick={() => exportMultiScreenPDF(screens, t)}
             disabled={solvedScreens.length === 0}
             style={{ opacity: solvedScreens.length === 0 ? 0.38 : 1, cursor: solvedScreens.length === 0 ? "not-allowed" : "pointer" }}
           >
-            ⬇ Exporter PDF
+            {t.exportPdf}
           </button>
         </div>
       </div>
 
       <div className="ms-content">
-        <div className="ms-title">Configuration Multi-Écrans</div>
+        <div className="ms-title">{t.msPageTitle}</div>
         <div className="ms-subtitle">
-          Configurez chaque écran indépendamment, puis exportez la synthèse complète de l'installation en PDF.
+          {t.msPageSub}
         </div>
 
         {loading ? (
-          <div style={{ color: "#aeaeb2", fontSize: 14, padding: "24px 0" }}>Chargement du catalogue…</div>
+          <div style={{ color: "#aeaeb2", fontSize: 14, padding: "24px 0" }}>{t.loadingCatalog}</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             {screens.map((screen, idx) => (
@@ -759,16 +765,16 @@ export default function MultiScreen({ onBack }) {
         {/* Synthesis */}
         {solvedScreens.length > 0 && (
           <div className="ms-synthesis">
-            <div className="ms-synthesis-title">📊 Synthèse de l'installation</div>
+            <div className="ms-synthesis-title">{t.synthesis}</div>
 
             <div className="ms-synth-grid">
               {[
-                { label: "Écrans configurés",  val: solvedScreens.length,                                                                         sub: null },
-                { label: "Panneaux total",      val: solvedScreens.reduce((s, sc) => s + sc.solution.totalPanels, 0),                              sub: null },
-                { label: "Poids total",         val: `${solvedScreens.reduce((s, sc) => s + sc.solution.totalWeight, 0).toFixed(1)} kg`,           sub: null },
-                { label: "Conso. max totale",
+                { label: t.screensConfigured, val: solvedScreens.length,                                                                                                          sub: null },
+                { label: t.panelsTotal,       val: solvedScreens.reduce((s, sc) => s + sc.solution.totalPanels, 0),                                                              sub: null },
+                { label: t.totalWeightLabel,  val: `${solvedScreens.reduce((s, sc) => s + sc.solution.totalWeight, 0).toFixed(1)} kg`,                                           sub: null },
+                { label: t.maxPowerTotal,
                   val: `${(solvedScreens.reduce((s, sc) => s + sc.solution.totalPowerMax, 0) / 1000).toFixed(2)} kW`,
-                  sub: `Moy : ${(solvedScreens.reduce((s, sc) => s + sc.solution.totalPowerAvg, 0) / 1000).toFixed(2)} kW` },
+                  sub: `${t.avg} ${(solvedScreens.reduce((s, sc) => s + sc.solution.totalPowerAvg, 0) / 1000).toFixed(2)} kW` },
               ].map((item, i) => (
                 <div key={i} className="ms-synth-box">
                   <div className="ms-synth-label">{item.label}</div>
@@ -785,14 +791,14 @@ export default function MultiScreen({ onBack }) {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Écran</th>
-                    <th>Dim. cible</th>
-                    <th>Dim. réelle</th>
-                    <th>Panneaux</th>
-                    <th>Modèles utilisés</th>
-                    <th>Résolution</th>
-                    <th>Poids</th>
-                    <th>Conso max</th>
+                    <th>{t.screenCol}</th>
+                    <th>{t.targetDimCol}</th>
+                    <th>{t.realDimCol}</th>
+                    <th>{t.panelsCol}</th>
+                    <th>{t.modelsUsed}</th>
+                    <th>{t.resolution}</th>
+                    <th>{t.weight}</th>
+                    <th>{t.maxPower}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -811,10 +817,10 @@ export default function MultiScreen({ onBack }) {
                         </td>
                         <td style={{ fontWeight: 700, color: "#0071e3" }}>{sol.totalPanels}</td>
                         <td style={{ fontSize: 12, lineHeight: 1.5 }}>
-                          {sol.layout.map((t, i) => (
+                          {sol.layout.map((tile, i) => (
                             <div key={i}>
-                              <b>{t.panel.panel_ref}</b>
-                              <span style={{ color: "#6e6e73" }}> ×{t.count}</span>
+                              <b>{tile.panel.panel_ref}</b>
+                              <span style={{ color: "#6e6e73" }}> ×{tile.count}</span>
                             </div>
                           ))}
                         </td>
@@ -827,10 +833,10 @@ export default function MultiScreen({ onBack }) {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={4}>TOTAL</td>
+                    <td colSpan={4}>{t.total}</td>
                     <td>{solvedScreens.reduce((s, sc) => s + sc.solution.totalPanels, 0)}</td>
                     <td style={{ fontSize: 11 }}>
-                      {[...new Set(solvedScreens.flatMap(sc => sc.solution.layout.map(t => t.panel.panel_ref)))].join(", ")}
+                      {[...new Set(solvedScreens.flatMap(sc => sc.solution.layout.map(tile => tile.panel.panel_ref)))].join(", ")}
                     </td>
                     <td>{(solvedScreens.reduce((s, sc) => s + sc.solution.totalPixW * sc.solution.totalPixH, 0) / 1e6).toFixed(1)} Mpx</td>
                     <td>{solvedScreens.reduce((s, sc) => s + sc.solution.totalWeight, 0).toFixed(1)} kg</td>
@@ -841,8 +847,8 @@ export default function MultiScreen({ onBack }) {
             </div>
 
             <div style={{ marginTop: 20 }}>
-              <button className="ms-btn-pdf" onClick={() => exportMultiScreenPDF(screens)}>
-                ⬇ Exporter en PDF
+              <button className="ms-btn-pdf" onClick={() => exportMultiScreenPDF(screens, t)}>
+                {t.exportPdf}
               </button>
             </div>
           </div>
