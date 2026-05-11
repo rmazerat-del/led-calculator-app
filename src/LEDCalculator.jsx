@@ -1081,6 +1081,7 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
             <div className="topbar-title">LED Calculator</div>
             <div className="topbar-subtitle">Configurateur professionnel</div>
           </div>
+          {onAdmin && <button onClick={onAdmin} className="admin-btn" style={{ marginLeft: 12 }}>{t.adminBtn}</button>}
         </div>
 
         <div className="topbar-kpis">
@@ -1099,7 +1100,6 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
           </div>
           {onMultiScreen && <button onClick={onMultiScreen} className="admin-btn" style={{background:"linear-gradient(145deg,#00b4d8,#0077b6)",color:"white",border:"none"}}>{t.multiBtn}</button>}
           {onMixer && <button onClick={onMixer} className="admin-btn" style={{background:"linear-gradient(145deg,#6f42c1,#9d6bff)",color:"white",border:"none"}}>{t.mixBtn}</button>}
-          {onAdmin && <button onClick={onAdmin} className="admin-btn">{t.adminBtn}</button>}
           <LangToggle />
           <button onClick={handlePDF} disabled={pdfLoading} className="pdf-topbar-btn">
             {pdfLoading ? "⏳ Génération…" : t.exportPdf}
