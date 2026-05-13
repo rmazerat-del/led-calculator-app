@@ -347,8 +347,7 @@ export const translations = {
     contactSubject: (ref) => `Demande de prix — ${ref}`,
     contactBody: (ref, w, h, panels, res) =>
       `Bonjour,\n\nJe souhaite obtenir un devis pour la configuration suivante :\n\n` +
-      `• Panneau : ${ref}\n• Dimensions : ${w} × ${h} m\n• Panneaux : ${panels}\n• Résolution : ${res}\n\n` +
-      `La fiche de configuration PDF vient d'être téléchargée — elle est jointe à ce message.\n\nCordialement,`,
+      `• Panneau : ${ref}\n• Dimensions : ${w} × ${h} m\n• Panneaux : ${panels}\n• Résolution : ${res}\n\nCordialement,`,
   },
 
   en: {
@@ -698,8 +697,7 @@ export const translations = {
     contactSubject: (ref) => `Quote request — ${ref}`,
     contactBody: (ref, w, h, panels, res) =>
       `Hello,\n\nI would like to request a quote for the following configuration:\n\n` +
-      `• Panel: ${ref}\n• Dimensions: ${w} × ${h} m\n• Panels: ${panels}\n• Resolution: ${res}\n\n` +
-      `The configuration PDF has just been downloaded — it is attached to this message.\n\nBest regards,`,
+      `• Panel: ${ref}\n• Dimensions: ${w} × ${h} m\n• Panels: ${panels}\n• Resolution: ${res}\n\nBest regards,`,
   },
 
   zh: {
@@ -1049,7 +1047,6 @@ export const translations = {
     contactSubject: (ref) => `询价 — ${ref}`,
     contactBody: (ref, w, h, panels, res) =>
       `您好，\n\n我想获取以下配置的报价：\n\n` +
-      `• 面板：${ref}\n• 尺寸：${w} × ${h} m\n• 面板数：${panels}\n• 分辨率：${res}\n\n` +
-      `配置 PDF 已自动下载，请将其作为附件附在此邮件中。\n\n谢谢，`,
+      `• 面板：${ref}\n• 尺寸：${w} × ${h} m\n• 面板数：${panels}\n• 分辨率：${res}\n\n谢谢，`,
   },
 };

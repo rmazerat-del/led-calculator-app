@@ -1060,10 +1060,7 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
     setPdfLoading(false);
   };
 
-  const handleContact = async () => {
-    if (window.jspdf) {
-      try { await generatePDF(selected, result, quality); } catch (_) {}
-    }
+  const handleContact = () => {
     const subject = encodeURIComponent(t.contactSubject(selected.panel_ref));
     const body = encodeURIComponent(t.contactBody(selected.panel_ref, totalWidth.toFixed(2), totalHeight.toFixed(2), `${pW}×${pH} (${totalPanels} u.)`, `${rW}×${rH} px`));
     window.location.href = `mailto:contact@amf-led.fr?subject=${subject}&body=${body}`;
