@@ -1060,6 +1060,15 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
     setPdfLoading(false);
   };
 
+  const handleContact = async () => {
+    if (window.jspdf) {
+      try { await generatePDF(selected, result, quality); } catch (_) {}
+    }
+    const subject = encodeURIComponent(t.contactSubject(selected.panel_ref));
+    const body = encodeURIComponent(t.contactBody(selected.panel_ref, totalWidth.toFixed(2), totalHeight.toFixed(2), `${pW}×${pH} (${totalPanels} u.)`, `${rW}×${rH} px`));
+    window.location.href = `mailto:contact@amf-led.fr?subject=${subject}&body=${body}`;
+  };
+
   const chevron = (
     <span className="product-select-chevron">
       <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
@@ -1095,12 +1104,9 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
         </div>
 
         <div className="topbar-right">
-          <div className="topbar-badge" style={{ color: quality.color, borderColor: quality.color + "55", background: quality.color + "18" }}>
-            {quality.label}
-          </div>
+          <LangToggle />
           {onMultiScreen && <button onClick={onMultiScreen} className="admin-btn" style={{background:"linear-gradient(145deg,#00b4d8,#0077b6)",color:"white",border:"none"}}>{t.multiBtn}</button>}
           {onMixer && <button onClick={onMixer} className="admin-btn" style={{background:"linear-gradient(145deg,#6f42c1,#9d6bff)",color:"white",border:"none"}}>{t.mixBtn}</button>}
-          <LangToggle />
           <button onClick={handlePDF} disabled={pdfLoading} className="pdf-topbar-btn">
             {pdfLoading ? "⏳ Génération…" : t.exportPdf}
           </button>
@@ -1200,29 +1206,32 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
               {pdfLoading ? t.generatingPdf : t.exportPdf}
             </button>
 
-            <a
-              href={`mailto:contact@amf-led.fr?subject=${encodeURIComponent(t.contactSubject(selected.panel_ref))}&body=${encodeURIComponent(t.contactBody(selected.panel_ref, totalWidth.toFixed(2), totalHeight.toFixed(2), `${pW}×${pH} (${totalPanels} u.)`, `${rW}×${rH} px`))}`}
+            <button
+              onClick={handleContact}
               style={{
                 display: "block",
-                padding: "8px 0",
+                width: "100%",
+                padding: "10px 0",
                 borderRadius: 7,
-                border: "1.5px solid var(--border)",
-                background: "transparent",
-                color: "var(--text-muted)",
-                fontSize: 10,
-                fontWeight: 600,
+                border: "none",
+                background: "linear-gradient(135deg, oklch(44% 0.188 245 / 0.12), oklch(44% 0.188 245 / 0.06))",
+                color: "var(--accent)",
+                fontSize: 11,
+                fontWeight: 700,
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
                 textAlign: "center",
                 textDecoration: "none",
                 fontFamily: "var(--font-ui)",
-                transition: "border-color .15s, color .15s",
+                cursor: "pointer",
+                outline: "1.5px solid oklch(44% 0.188 245 / 0.3)",
+                transition: "outline-color .15s, background .15s",
               }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-muted)"; }}
+              onMouseEnter={e => { e.currentTarget.style.outlineColor = "var(--accent)"; e.currentTarget.style.background = "linear-gradient(135deg, oklch(44% 0.188 245 / 0.18), oklch(44% 0.188 245 / 0.10))"; }}
+              onMouseLeave={e => { e.currentTarget.style.outlineColor = "oklch(44% 0.188 245 / 0.3)"; e.currentTarget.style.background = "linear-gradient(135deg, oklch(44% 0.188 245 / 0.12), oklch(44% 0.188 245 / 0.06))"; }}
             >
               {t.contactBtn}
-            </a>
+            </button>
           </div>
         </div>
 
