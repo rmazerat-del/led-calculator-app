@@ -341,6 +341,13 @@ export const translations = {
     histSaveBtn: (ref, w, h) => `＋ Sauvegarder la configuration actuelle (${ref} · ${w}×${h} m)`,
     histEmpty: "Aucune configuration sauvegardée.\nCliquez sur « Sauvegarder » pour en créer une.",
     histLoad: "Charger",
+
+    // ── Contact ──
+    contactBtn: "✉ Demande de prix",
+    contactSubject: (ref) => `Demande de prix — ${ref}`,
+    contactBody: (ref, w, h, panels, res) =>
+      `Bonjour,\n\nJe souhaite obtenir un devis pour la configuration suivante :\n\n` +
+      `• Panneau : ${ref}\n• Dimensions : ${w} × ${h} m\n• Panneaux : ${panels}\n• Résolution : ${res}\n\nCordialement,`,
   },
 
   en: {
@@ -684,6 +691,13 @@ export const translations = {
     histSaveBtn: (ref, w, h) => `＋ Save current configuration (${ref} · ${w}×${h} m)`,
     histEmpty: "No saved configuration.\nClick \"Save\" to create one.",
     histLoad: "Load",
+
+    // ── Contact ──
+    contactBtn: "✉ Request a quote",
+    contactSubject: (ref) => `Quote request — ${ref}`,
+    contactBody: (ref, w, h, panels, res) =>
+      `Hello,\n\nI would like to request a quote for the following configuration:\n\n` +
+      `• Panel: ${ref}\n• Dimensions: ${w} × ${h} m\n• Panels: ${panels}\n• Resolution: ${res}\n\nBest regards,`,
   },
 
   zh: {
@@ -1027,5 +1041,12 @@ export const translations = {
     histSaveBtn: (ref, w, h) => `＋ 保存当前配置 (${ref} · ${w}×${h} m)`,
     histEmpty: "没有已保存的配置。\n点击「保存」以创建一个。",
     histLoad: "加载",
+
+    // ── 联系 ──
+    contactBtn: "✉ 询价",
+    contactSubject: (ref) => `询价 — ${ref}`,
+    contactBody: (ref, w, h, panels, res) =>
+      `您好，\n\n我想获取以下配置的报价：\n\n` +
+      `• 面板：${ref}\n• 尺寸：${w} × ${h} m\n• 面板数：${panels}\n• 分辨率：${res}\n\n谢谢，`,
   },
 };

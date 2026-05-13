@@ -1198,6 +1198,31 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
           <button className="pdf-btn" onClick={handlePDF} disabled={pdfLoading}>
             {pdfLoading ? t.generatingPdf : t.exportPdf}
           </button>
+
+          <a
+            href={`mailto:contact@amf-led.fr?subject=${encodeURIComponent(t.contactSubject(selected.panel_ref))}&body=${encodeURIComponent(t.contactBody(selected.panel_ref, totalWidth.toFixed(2), totalHeight.toFixed(2), `${pW}×${pH} (${totalPanels} u.)`, `${rW}×${rH} px`))}`}
+            style={{
+              display: "block",
+              marginTop: 8,
+              padding: "8px 0",
+              borderRadius: 7,
+              border: "1.5px solid var(--border)",
+              background: "transparent",
+              color: "var(--text-muted)",
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              textAlign: "center",
+              textDecoration: "none",
+              fontFamily: "var(--font-ui)",
+              transition: "border-color .15s, color .15s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-muted)"; }}
+          >
+            {t.contactBtn}
+          </a>
         </div>
 
         {/* RIGHT */}
