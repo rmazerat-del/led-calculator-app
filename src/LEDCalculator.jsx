@@ -1110,6 +1110,9 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
           <button onClick={handlePDF} disabled={pdfLoading} className="pdf-topbar-btn">
             {pdfLoading ? "⏳ Génération…" : t.exportPdf}
           </button>
+          <button onClick={handleContact} className="pdf-topbar-btn" style={{ background: "linear-gradient(135deg, var(--accent2), var(--accent))" }}>
+            {t.contactBtn}
+          </button>
         </div>
       </div>
 
