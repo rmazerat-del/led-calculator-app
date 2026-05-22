@@ -47,7 +47,7 @@ const css = `
 
 const EMPTY_FORM = {
   marque: "", type_led: "", brand: "", panel_ref: "",
-  pixel_pitch_mm: "", resolution_w: "", resolution_h: "",
+  pixel_pitch_mm: "", pitch_label: "", resolution_w: "", resolution_h: "",
   panel_width_m: "0.6", panel_height_m: "0.337", weight_kgs: "",
   nits: "", power_max_w: "", power_avg_w: "", refresh_rate_hz: "3840",
   rj45_capacity: "535000", power_cable_capacity: "2200", is_active: true, notes: ""
@@ -202,6 +202,7 @@ export default function AdminPanels({ onBack, onLogout }) {
       marque: form.marque, type_led: form.type_led, brand: form.brand,
       panel_ref: form.panel_ref,
       pixel_pitch_mm: parseFloat(form.pixel_pitch_mm),
+      pitch_label: form.pitch_label ? form.pitch_label.trim() : null,
       resolution_w: parseInt(form.resolution_w), resolution_h: parseInt(form.resolution_h),
       panel_width_m: parseFloat(form.panel_width_m), panel_height_m: parseFloat(form.panel_height_m),
       weight_kgs: parseFloat(form.weight_kgs), nits: parseInt(form.nits),
@@ -346,7 +347,7 @@ if (editing) {
                     <td>{p.type_led || '—'}</td>
                     <td style={{fontWeight:700}}>{p.panel_ref}</td>
                     <td>{p.brand || '—'}</td>
-                    <td>{p.pixel_pitch_mm} mm</td>
+                    <td>{p.pitch_label || `${p.pixel_pitch_mm} mm`}</td>
                     <td>{p.resolution_w}×{p.resolution_h}</td>
                     <td>{p.panel_width_m}×{p.panel_height_m} m</td>
                     <td>{p.nits}</td>
@@ -450,6 +451,7 @@ if (editing) {
                 { name:"brand",                label: t.serie,         full:false },
                 { name:"panel_ref",            label: t.reference,     full:false },
                 { name:"pixel_pitch_mm",       label: t.pixelPitch },
+                { name:"pitch_label",          label: t.pitchLabel },
                 { name:"nits",                 label: t.brightness },
                 { name:"resolution_w",         label: t.resWidth },
                 { name:"resolution_h",         label: t.resHeight },
@@ -469,7 +471,7 @@ if (editing) {
                     name={f.name}
                     value={form[f.name] || ""}
                     onChange={handleChange}
-                    type={["marque","type_led","brand","panel_ref"].includes(f.name) ? "text" : "number"}
+                    type={["marque","type_led","brand","panel_ref","pitch_label"].includes(f.name) ? "text" : "number"}
                     step="any"
                   />
                 </div>

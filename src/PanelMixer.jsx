@@ -148,7 +148,7 @@ async function exportPDF(sol, targetW, targetH, t) {
   const rows = sol.layout.map(tile => `<tr>
     <td style="${T()}">${tile.panel.panel_ref}</td>
     <td style="${T()}">${tile.panel.marque||"—"}</td>
-    <td style="${T()}">${tile.panel.pixel_pitch_mm} mm</td>
+    <td style="${T()}">${tile.panel.pitch_label || tile.panel.pixel_pitch_mm + " mm"}</td>
     <td style="${T()}">${tile.wMm}×${tile.hMm} mm</td>
     <td style="${T()}">${tile.cols} col. × ${tile.rows} rang${tile.rows>1?"s":""}</td>
     <td style="${T("font-weight:700;color:#0071e3")}">${tile.count}</td>
@@ -394,15 +394,16 @@ export default function PanelMixer({ onBack }) {
       .then(({ data }) => { setAllPanels(data || []); setLoading(false); });
   }, []);
 
+  const pitchKey = (p) => p.pitch_label || String(p.pixel_pitch_mm);
   const brands = [...new Set(allPanels.map(p => p.marque).filter(Boolean))].sort();
   const pitches = [...new Set(
-    allPanels.filter(p => !filterBrand || p.marque === filterBrand).map(p => p.pixel_pitch_mm)
-  )].sort((a, b) => a - b);
+    allPanels.filter(p => !filterBrand || p.marque === filterBrand).map(pitchKey)
+  )].sort();
 
   // All visible panels are automatically included — no manual selection needed
   const activePanels = allPanels.filter(p =>
     (!filterBrand || p.marque === filterBrand) &&
-    (!filterPitch || String(p.pixel_pitch_mm) === filterPitch)
+    (!filterPitch || pitchKey(p) === filterPitch)
   );
 
   const handleSolve = () => {
@@ -462,7 +463,7 @@ export default function PanelMixer({ onBack }) {
             <select className="mixer-select" style={{width:"auto"}} value={filterPitch}
               onChange={e => { setFilterPitch(e.target.value); setSolutions(null); setChosenSol(null); }}>
               <option value="">{t.allPitches}</option>
-              {pitches.map(p => <option key={p} value={p}>{p} mm</option>)}
+              {pitches.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
           {loading ? (

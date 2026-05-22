@@ -533,15 +533,16 @@ function ScreenSolution({ sol }) {
 
 function ScreenCard({ screen, idx, brands, allPanels, onUpdate, onSolve, onRemove }) {
   const { t } = useLang();
+  const pitchKey = (p) => p.pitch_label || String(p.pixel_pitch_mm);
   const pitches = [...new Set(
     allPanels
       .filter(p => !screen.filterBrand || p.marque === screen.filterBrand)
-      .map(p => p.pixel_pitch_mm)
-  )].sort((a, b) => a - b);
+      .map(pitchKey)
+  )].sort();
 
   const activePanels = allPanels.filter(p =>
     (!screen.filterBrand || p.marque === screen.filterBrand) &&
-    (!screen.filterPitch || String(p.pixel_pitch_mm) === screen.filterPitch)
+    (!screen.filterPitch || pitchKey(p) === screen.filterPitch)
   );
 
   const canSolve = activePanels.length > 0 && parseFloat(screen.targetW) > 0 && parseFloat(screen.targetH) > 0;
@@ -574,7 +575,7 @@ function ScreenCard({ screen, idx, brands, allPanels, onUpdate, onSolve, onRemov
         <select className="ms-select" style={{ width: "auto" }} value={screen.filterPitch}
           onChange={e => onUpdate({ filterPitch: e.target.value, solution: null, noSolution: false })}>
           <option value="">{t.allPitches}</option>
-          {pitches.map(p => <option key={p} value={p}>{p} mm</option>)}
+          {pitches.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
         {activePanels.length > 0 && (
           <span style={{ fontSize: 12, color: "#aeaeb2", alignSelf: "center" }}>
@@ -693,7 +694,7 @@ export default function MultiScreen({ onBack }) {
   const handleSolve = (screen) => {
     const panels = allPanels.filter(p =>
       (!screen.filterBrand || p.marque === screen.filterBrand) &&
-      (!screen.filterPitch || String(p.pixel_pitch_mm) === screen.filterPitch)
+      (!screen.filterPitch || (p.pitch_label || String(p.pixel_pitch_mm)) === screen.filterPitch)
     );
     if (!panels.length || !screen.targetW || !screen.targetH) return;
     update(screen.id, { solving: true, solution: null, noSolution: false });

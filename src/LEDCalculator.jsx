@@ -574,6 +574,8 @@ function computeLED(selected, inputs, mode) {
   return { panelsW, panelsH, totalWidth, totalHeight, resW, resH, totalPixels, surface, totalPanels, totalPowerMax, totalPowerAvg };
 }
 
+const pitchDisplay = (p) => p.pitch_label || `${p.pixel_pitch_mm} mm`;
+
 function getGcd(a, b) { return b === 0 ? a : getGcd(b, a % b); }
 function getRatio(w, h) { const g = getGcd(Math.round(w), Math.round(h)); return `${Math.round(w/g)}:${Math.round(h/g)}`; }
 function getScreenQuality(w, h) {
@@ -674,7 +676,7 @@ async function generatePDF(selected, result, quality) {
   setFill(C.blue); rect(margin,y,3,14,0);
   setFont(10,"bold",C.text); text(selected.panel_ref, margin+8, y+6);
   setFont(7,"normal",C.muted);
-  text(`${selected.marque||""}  ·  P${selected.pixel_pitch_mm} mm  ·  ${selected.nits} nits  ·  ${selected.resolution_w}×${selected.resolution_h} px  ·  ${selected.refresh_rate_hz} Hz`, margin+8, y+12);
+  text(`${selected.marque||""}  ·  P${pitchDisplay(selected)}  ·  ${selected.nits} nits  ·  ${selected.resolution_w}×${selected.resolution_h} px  ·  ${selected.refresh_rate_hz} Hz`, margin+8, y+12);
   y += 20;
 
   // ── KPI CARDS ──
@@ -771,7 +773,7 @@ async function generatePDF(selected, result, quality) {
     ["Référence",selected.panel_ref],
     ["Marque",selected.marque||"—"],
     ["Type LED",selected.type_led||"—"],
-    ["Pitch pixel",`${selected.pixel_pitch_mm} mm`],
+    ["Pitch pixel", pitchDisplay(selected)],
     ["Dimensions cabinet",`${Math.round(selected.panel_width_m*100)} × ${Math.round(selected.panel_height_m*100)} cm`],
     ["Résolution cabinet",`${selected.resolution_w} × ${selected.resolution_h} px`],
     ["Poids unitaire",`${selected.weight_kgs} kg`],
@@ -1148,7 +1150,7 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
             <select className="product-select" value={selIdx} onChange={e => setSelIdx(Number(e.target.value))}>
               {filtered.map((p, i) => (
                 <option key={i} value={i}>
-                  {p.panel_ref} — P{p.pixel_pitch_mm} · {Math.round(p.panel_width_m*100)}×{Math.round(p.panel_height_m*100)}cm · {p.resolution_w}×{p.resolution_h}px · {p.nits}nits
+                  {p.panel_ref} — P{pitchDisplay(p)} · {Math.round(p.panel_width_m*100)}×{Math.round(p.panel_height_m*100)}cm · {p.resolution_w}×{p.resolution_h}px · {p.nits}nits
                 </option>
               ))}
             </select>
@@ -1364,7 +1366,7 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
             {activeTab === "product" && (
               <div>
                 <div className="stat-grid-3">
-                  <StatCard icon="📏" label={t.statPitch}       value={`${selected.pixel_pitch_mm} mm`} sub={t.subAngularRes} accentColor="#e8ff47" />
+                  <StatCard icon="📏" label={t.statPitch}       value={pitchDisplay(selected)} sub={t.subAngularRes} accentColor="#e8ff47" />
                   <StatCard icon="💡" label={t.statLuminosity}  value={`${selected.nits} nits`}         sub={t.subLuminanceMax} accentColor="#ffb347" />
                   <StatCard icon="🔄" label={t.statRefreshRate} value={`${selected.refresh_rate_hz} Hz`} sub={t.subRefreshFreq} accentColor="#47c4ff" />
                 </div>
@@ -1377,7 +1379,7 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
                         [t.rowLedType,     selected.type_led || "—"],
                         [t.rowSerie,       selected.brand    || "—"],
                         [t.rowBrandManu,   selected.marque   || "—"],
-                        [t.rowPitch,       `${selected.pixel_pitch_mm} mm`],
+                        [t.rowPitch,       pitchDisplay(selected)],
                         [t.rowCabinetDim,  `${Math.round(selected.panel_width_m*100)} × ${Math.round(selected.panel_height_m*100)} cm`],
                         [t.rowCabinetRes,  `${selected.resolution_w} × ${selected.resolution_h} px`],
                         [t.rowUnitWeight,  `${selected.weight_kgs} kg`],
@@ -1602,7 +1604,7 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
                   <div className="product-select-wrap">
                     <select className="product-select" value={selIdx2} onChange={e => setSelIdx2(Number(e.target.value))}>
                       {filtered2.map((p, i) => (
-                        <option key={i} value={i}>{p.panel_ref} — P{p.pixel_pitch_mm} · {Math.round(p.panel_width_m*100)}×{Math.round(p.panel_height_m*100)}cm · {p.nits}nits</option>
+                        <option key={i} value={i}>{p.panel_ref} — P{pitchDisplay(p)} · {Math.round(p.panel_width_m*100)}×{Math.round(p.panel_height_m*100)}cm · {p.nits}nits</option>
                       ))}
                     </select>
                     {chevron}
@@ -1626,7 +1628,7 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
                         <table className="data-table" style={{ fontSize:11 }}>
                           <tbody>
                             {[
-                              { k:t.comparePitch,          v:`${sel.pixel_pitch_mm} mm`,      win: wins(sel.pixel_pitch_mm, otherSel.pixel_pitch_mm, true) },
+                              { k:t.comparePitch,          v:pitchDisplay(sel),               win: wins(sel.pixel_pitch_mm, otherSel.pixel_pitch_mm, true) },
                               { k:t.compareLuminosity,     v:`${sel.nits} nits`,              win: wins(sel.nits, otherSel.nits, false) },
                               { k:t.compareRefresh,        v:`${sel.refresh_rate_hz} Hz`,     win: wins(sel.refresh_rate_hz, otherSel.refresh_rate_hz, false) },
                               { k:t.compareLedType,        v:sel.type_led || "—",             win: false },
