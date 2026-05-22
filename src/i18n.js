@@ -17,6 +17,7 @@ export const translations = {
     landingMixSub: "Disposition mixte",
     landingMixDesc: "Combinez différents formats de panneaux pour réaliser des architectures d'affichage LED complexes.",
     landingLaunch: "Ouvrir",
+    landingPartners: "Nos fournisseurs",
 
     // ── Commun ──
     loading: "Chargement…",
@@ -383,6 +384,7 @@ export const translations = {
     landingMixSub: "Mixed panel layout",
     landingMixDesc: "Combine different panel formats to achieve complex custom LED display architectures.",
     landingLaunch: "Open",
+    landingPartners: "Our suppliers",
 
     // ── Common ──
     loading: "Loading…",
@@ -748,6 +750,7 @@ export const translations = {
     landingMixSub: "混合面板布局",
     landingMixDesc: "组合不同面板规格，实现复杂的LED显示屏定制架构。",
     landingLaunch: "打开",
+    landingPartners: "我们的供应商",
 
     // ── Common ──
     loading: "加载中…",

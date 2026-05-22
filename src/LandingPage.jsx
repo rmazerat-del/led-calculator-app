@@ -124,12 +124,19 @@ const IconMix = () => (
   </svg>
 );
 
+const PARTNERS = [
+  { src: "/logo-qstech.png",  alt: "QSTECH" },
+  { src: "/logo-uniview.png", alt: "Uniview LED" },
+  { src: "/logo-cecoceco.jpg", alt: "Cecoceco" },
+];
+
 // ── Main LandingPage ──────────────────────────────────────────────────────────
 export default function LandingPage({ onNavigate }) {
   const { t } = useLang();
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(null);
   const [clicked, setClicked] = useState(null);
+  const [partnerHovered, setPartnerHovered] = useState(null);
 
   useEffect(() => {
     const id = setTimeout(() => setVisible(true), 80);
@@ -178,35 +185,23 @@ export default function LandingPage({ onNavigate }) {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "radial-gradient(ellipse 120% 80% at 50% 0%, #0d1830 0%, #080c18 55%, #050810 100%)",
+      background: "radial-gradient(ellipse 120% 70% at 50% 0%, #0d1830 0%, #080c18 55%, #050810 100%)",
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
-      justifyContent: "center",
+      justifyContent: "flex-start",
       position: "relative",
       overflow: "hidden",
       fontFamily: "-apple-system, 'Helvetica Neue', Arial, sans-serif",
-      padding: "60px 24px 80px",
+      padding: "18px 24px 56px",
     }}>
       <LEDCanvas />
-
-      {/* Radial glow center */}
-      <div style={{
-        position: "absolute",
-        top: "20%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        width: 600,
-        height: 400,
-        background: "radial-gradient(ellipse, rgba(0,113,227,0.08) 0%, transparent 70%)",
-        pointerEvents: "none",
-      }} />
 
       {/* Top-right language toggle */}
       <div style={{
         position: "fixed",
-        top: 20,
-        right: 24,
+        top: 16,
+        right: 20,
         zIndex: 10,
         opacity: visible ? 1 : 0,
         transition: "opacity 0.8s 0.6s",
@@ -214,23 +209,24 @@ export default function LandingPage({ onNavigate }) {
         <LangToggle />
       </div>
 
-      {/* Header */}
+      {/* ── HEADER ── */}
       <div style={{
         textAlign: "center",
-        marginBottom: 64,
+        marginBottom: 32,
         zIndex: 1,
-        transform: visible ? "translateY(0)" : "translateY(-24px)",
+        transform: visible ? "translateY(0)" : "translateY(-20px)",
         opacity: visible ? 1 : 0,
         transition: "transform 0.8s cubic-bezier(0.25,1,0.5,1), opacity 0.8s cubic-bezier(0.25,1,0.5,1)",
+        paddingTop: 8,
       }}>
         {/* AMF Logo */}
         <img
           src="/amf-logo.png"
           alt="AMF — AdvancedMultimedia.Fr"
           style={{
-            height: 72,
+            height: 64,
             width: "auto",
-            marginBottom: 28,
+            marginBottom: 18,
             display: "block",
             marginLeft: "auto",
             marginRight: "auto",
@@ -241,34 +237,35 @@ export default function LandingPage({ onNavigate }) {
           }}
         />
         <h1 style={{
-          fontSize: "clamp(36px, 5vw, 54px)",
+          fontSize: "clamp(32px, 4.5vw, 50px)",
           fontWeight: 700,
           color: "#ffffff",
           letterSpacing: "-0.025em",
-          margin: "0 0 10px",
+          margin: "0 0 8px",
           lineHeight: 1.1,
         }}>
           LED Calculator
         </h1>
         <p style={{
-          fontSize: 16,
-          color: "rgba(255,255,255,0.38)",
-          letterSpacing: "0.04em",
+          fontSize: 15,
+          color: "rgba(255,255,255,0.35)",
+          letterSpacing: "0.03em",
           margin: 0,
         }}>
           {t.landingSubtitle || "Professional configurator — choose a mode to begin"}
         </p>
       </div>
 
-      {/* Cards */}
+      {/* ── CARDS ── */}
       <div style={{
         display: "flex",
-        gap: 20,
+        gap: 18,
         flexWrap: "wrap",
         justifyContent: "center",
         zIndex: 1,
         width: "100%",
-        maxWidth: 940,
+        maxWidth: 960,
+        marginBottom: 52,
       }}>
         {cards.map((card, i) => {
           const isHovered = hovered === card.id;
@@ -282,15 +279,15 @@ export default function LandingPage({ onNavigate }) {
               onMouseLeave={() => setHovered(null)}
               style={{
                 flex: "1 1 260px",
-                maxWidth: 290,
-                padding: "36px 28px 32px",
+                maxWidth: 300,
+                padding: "32px 26px 28px",
                 background: isHovered
                   ? `rgba(${card.glow}, 0.08)`
                   : "rgba(255,255,255,0.03)",
                 border: isHovered
                   ? `1px solid ${card.border}`
                   : "1px solid rgba(255,255,255,0.07)",
-                borderRadius: 22,
+                borderRadius: 20,
                 cursor: "pointer",
                 textAlign: "left",
                 position: "relative",
@@ -298,11 +295,11 @@ export default function LandingPage({ onNavigate }) {
                 outline: "none",
                 fontFamily: "inherit",
                 transform: !visible
-                  ? `translateY(48px) scale(0.94)`
+                  ? `translateY(44px) scale(0.94)`
                   : isClicked
                   ? "scale(0.96)"
                   : isHovered
-                  ? "translateY(-10px) scale(1.02)"
+                  ? "translateY(-9px) scale(1.02)"
                   : "translateY(0) scale(1)",
                 opacity: visible ? 1 : 0,
                 transition: isClicked
@@ -315,8 +312,8 @@ export default function LandingPage({ onNavigate }) {
                     "box-shadow 0.35s cubic-bezier(0.25,1,0.5,1)",
                   ].join(", "),
                 boxShadow: isHovered
-                  ? `0 28px 70px rgba(${card.glow}, 0.22), 0 0 0 1px rgba(255,255,255,0.1), inset 0 1px 0 rgba(255,255,255,0.08)`
-                  : "0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)",
+                  ? `0 24px 60px rgba(${card.glow}, 0.22), 0 0 0 1px rgba(255,255,255,0.1), inset 0 1px 0 rgba(255,255,255,0.08)`
+                  : "0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)",
               }}
             >
               {/* Top gradient line */}
@@ -327,84 +324,55 @@ export default function LandingPage({ onNavigate }) {
                 background: card.gradient,
                 opacity: isHovered ? 1 : 0.35,
                 transition: "opacity 0.3s ease",
-                borderRadius: "22px 22px 0 0",
+                borderRadius: "20px 20px 0 0",
               }} />
 
-              {/* Subtle inner glow on hover */}
               {isHovered && (
                 <div style={{
                   position: "absolute",
                   top: 0, left: 0, right: 0, bottom: 0,
-                  background: `radial-gradient(ellipse 80% 60% at 50% 0%, rgba(${card.glow}, 0.1) 0%, transparent 70%)`,
+                  background: `radial-gradient(ellipse 80% 55% at 50% 0%, rgba(${card.glow}, 0.1) 0%, transparent 70%)`,
                   pointerEvents: "none",
                 }} />
               )}
 
-              {/* Icon */}
               <div style={{
-                width: 52, height: 52,
-                borderRadius: 14,
+                width: 50, height: 50,
+                borderRadius: 13,
                 background: card.gradient,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                marginBottom: 22,
-                boxShadow: isHovered
-                  ? `0 8px 28px rgba(${card.glow}, 0.55)`
-                  : `0 4px 12px rgba(${card.glow}, 0.3)`,
+                marginBottom: 20,
+                boxShadow: isHovered ? `0 8px 24px rgba(${card.glow}, 0.55)` : `0 4px 10px rgba(${card.glow}, 0.3)`,
                 transition: "box-shadow 0.3s ease, transform 0.3s cubic-bezier(0.25,1,0.5,1)",
                 transform: isHovered ? "scale(1.08)" : "scale(1)",
               }}>
                 {card.icon}
               </div>
 
-              {/* Title */}
-              <div style={{
-                fontSize: 19,
-                fontWeight: 700,
-                color: "#ffffff",
-                letterSpacing: "-0.01em",
-                marginBottom: 5,
-                lineHeight: 1.2,
-              }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#ffffff", letterSpacing: "-0.01em", marginBottom: 4, lineHeight: 1.2 }}>
                 {card.title}
               </div>
-
-              {/* Subtitle */}
-              <div style={{
-                fontSize: 11,
-                fontWeight: 600,
-                color: `rgba(${card.glow}, 0.75)`,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                marginBottom: 14,
-              }}>
+              <div style={{ fontSize: 10.5, fontWeight: 600, color: `rgba(${card.glow}, 0.75)`, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>
                 {card.sub}
               </div>
-
-              {/* Description */}
-              <div style={{
-                fontSize: 13.5,
-                color: "rgba(255,255,255,0.42)",
-                lineHeight: 1.65,
-                marginBottom: 28,
-              }}>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", lineHeight: 1.65, marginBottom: 24 }}>
                 {card.desc}
               </div>
 
-              {/* CTA */}
               <div style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                fontSize: 13,
+                fontSize: 12.5,
                 fontWeight: 600,
-                color: isHovered ? `rgba(${card.glow}, 1)` : "rgba(255,255,255,0.25)",
+                color: isHovered ? `rgba(${card.glow}, 1)` : "rgba(255,255,255,0.22)",
                 transition: "color 0.25s ease, transform 0.25s cubic-bezier(0.25,1,0.5,1)",
                 transform: isHovered ? "translateX(3px)" : "none",
               }}>
                 {t.landingLaunch || "Open"}
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </div>
@@ -413,27 +381,75 @@ export default function LandingPage({ onNavigate }) {
         })}
       </div>
 
-      {/* Bottom watermark */}
+      {/* ── PARTNER LOGOS ── */}
       <div style={{
-        position: "absolute",
-        bottom: 28,
-        fontSize: 10.5,
-        color: "rgba(255,255,255,0.12)",
-        letterSpacing: "0.14em",
-        textTransform: "uppercase",
         zIndex: 1,
+        width: "100%",
+        maxWidth: 860,
         opacity: visible ? 1 : 0,
-        transition: "opacity 1s 1.2s",
-        userSelect: "none",
+        transform: visible ? "translateY(0)" : "translateY(20px)",
+        transition: "opacity 0.9s cubic-bezier(0.25,1,0.5,1) 0.65s, transform 0.9s cubic-bezier(0.25,1,0.5,1) 0.65s",
       }}>
-        AMF LED — Professional Display Solutions
+        {/* Separator */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          marginBottom: 28,
+        }}>
+          <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08) 50%, transparent)" }} />
+          <span style={{
+            fontSize: 9.5,
+            fontWeight: 700,
+            letterSpacing: "0.2em",
+            color: "rgba(255,255,255,0.2)",
+            textTransform: "uppercase",
+            whiteSpace: "nowrap",
+          }}>
+            {t.landingPartners || "Nos fournisseurs"}
+          </span>
+          <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08) 50%, transparent)" }} />
+        </div>
+
+        {/* Logos row */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 48,
+          flexWrap: "wrap",
+        }}>
+          {PARTNERS.map((p, i) => (
+            <div
+              key={p.alt}
+              onMouseEnter={() => setPartnerHovered(i)}
+              onMouseLeave={() => setPartnerHovered(null)}
+              style={{
+                opacity: partnerHovered === i ? 0.9 : 0.38,
+                transform: partnerHovered === i ? "scale(1.06)" : "scale(1)",
+                transition: "opacity 0.35s cubic-bezier(0.25,1,0.5,1), transform 0.35s cubic-bezier(0.25,1,0.5,1)",
+                cursor: "default",
+              }}
+            >
+              <img
+                src={p.src}
+                alt={p.alt}
+                style={{
+                  height: 36,
+                  width: "auto",
+                  maxWidth: 160,
+                  display: "block",
+                  filter: "brightness(0) invert(1)",
+                  userSelect: "none",
+                  pointerEvents: "none",
+                }}
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       <style>{`
-        @keyframes dotPulse {
-          0%, 100% { opacity: 0.4; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.5); }
-        }
         @media (prefers-reduced-motion: reduce) {
           * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
         }
