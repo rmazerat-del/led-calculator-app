@@ -431,20 +431,24 @@ export default function LandingPage({ onNavigate }) {
                 cursor: "default",
                 background: "#ffffff",
                 borderRadius: 9,
-                padding: "9px 22px",
+                width: 160,
+                height: 52,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                flexShrink: 0,
               }}
             >
               <img
                 src={p.src}
                 alt={p.alt}
                 style={{
-                  height: 30,
+                  maxWidth: 124,
+                  maxHeight: 34,
                   width: "auto",
-                  maxWidth: 150,
+                  height: "auto",
                   display: "block",
+                  objectFit: "contain",
                   filter: "grayscale(0.25)",
                   userSelect: "none",
                   pointerEvents: "none",
