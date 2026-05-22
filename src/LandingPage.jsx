@@ -223,28 +223,23 @@ export default function LandingPage({ onNavigate }) {
         opacity: visible ? 1 : 0,
         transition: "transform 0.8s cubic-bezier(0.25,1,0.5,1), opacity 0.8s cubic-bezier(0.25,1,0.5,1)",
       }}>
-        {/* Logo dots */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 5, marginBottom: 20 }}>
-          {[...Array(5)].map((_, i) => (
-            <div key={i} style={{
-              width: 6, height: 6, borderRadius: "50%",
-              background: i === 2 ? "#0071e3" : "rgba(0,113,227,0.35)",
-              boxShadow: i === 2 ? "0 0 10px rgba(0,113,227,0.8)" : "none",
-              animation: `dotPulse 2.4s ${i * 0.18}s infinite ease-in-out`,
-            }} />
-          ))}
-        </div>
-
-        <div style={{
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: "0.25em",
-          color: "rgba(0,113,227,0.8)",
-          textTransform: "uppercase",
-          marginBottom: 14,
-        }}>
-          AMF LED
-        </div>
+        {/* AMF Logo */}
+        <img
+          src="/amf-logo.png"
+          alt="AMF — AdvancedMultimedia.Fr"
+          style={{
+            height: 72,
+            width: "auto",
+            marginBottom: 28,
+            display: "block",
+            marginLeft: "auto",
+            marginRight: "auto",
+            filter: "invert(1) brightness(1.1)",
+            mixBlendMode: "screen",
+            userSelect: "none",
+            pointerEvents: "none",
+          }}
+        />
         <h1 style={{
           fontSize: "clamp(36px, 5vw, 54px)",
           fontWeight: 700,
