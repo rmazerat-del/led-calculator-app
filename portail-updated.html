@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portail NAS</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1a1a2e;
+    }
+
+    .hero {
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 0.5rem;
+    }
+
+    .hero p {
+      font-size: 1rem;
+      color: #6b7280;
+      margin-bottom: 2.5rem;
+    }
+
+    .cards {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem 2.5rem;
+      width: 220px;
+      text-decoration: none;
+      color: inherit;
+      border: 1px solid #e5e7eb;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.10);
+    }
+
+    .card-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .card h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .card p {
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
+
+    .card.primary {
+      background: #1a1a2e;
+      color: white;
+      border-color: transparent;
+    }
+
+    .card.primary p {
+      color: #9ca3af;
+    }
+
+    /* Badge de contexte réseau */
+    .network-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: #6b7280;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 50px;
+      padding: 4px 14px;
+      margin-bottom: 2rem;
+    }
+
+    .network-badge .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .dot-local  { background: #4ade80; }
+    .dot-remote { background: #f59e0b; }
+
+    /* Bouton flottant SAV */
+    .fab {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #1a1a2e;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 1rem 1.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.2s;
+      box-shadow: 0 4px 20px rgba(26,26,46,0.25);
+      z-index: 9999;
+    }
+
+    .fab:hover {
+      background: #2d2d5a;
+      transform: scale(1.04);
+    }
+
+    .fab .dot-fab {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hero">
+    <h1>Portail interne</h1>
+
+    <!-- Badge réseau dynamique -->
+    <div class="network-badge">
+      <span class="dot" id="net-dot"></span>
+      <span id="net-label">Détection du réseau...</span>
+    </div>
+
+    <p>Accès rapide aux outils de l'équipe</p>
+
+    <div class="cards">
+
+      <a id="card-sav" href="#" class="card primary">
+        <div class="card-icon">🔧</div>
+        <h2>App SAV LED</h2>
+        <p>Gestion des dossiers après-vente</p>
+      </a>
+
+      <a id="card-dsm" href="#" class="card">
+        <div class="card-icon">💾</div>
+        <h2>DSM Synology</h2>
+        <p>Interface d'administration NAS</p>
+      </a>
+
+      <a href="https://led-calculator-app-murex.vercel.app/" target="_blank" rel="noopener" class="card">
+        <div class="card-icon">💡</div>
+        <h2>LED Calculator</h2>
+        <p>Calculateur de panneaux LED</p>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- Bouton flottant toujours visible -->
+  <a id="fab-sav" href="#" class="fab">
+    <span class="dot-fab"></span>
+    Ouvrir l'app SAV
+  </a>
+
+  <script>
+    // URLs selon le contexte réseau
+    var LOCAL_SAV  = 'http://192.168.1.70:3000';
+    var LOCAL_DSM  = 'http://192.168.1.70:5000';
+    var REMOTE_SAV = 'http://92.151.79.123:8080';
+    var REMOTE_DSM = 'http://92.151.79.123:5001'; // port DSM externe si configuré
+
+    var dot   = document.getElementById('net-dot');
+    var label = document.getElementById('net-label');
+
+    function applyUrls(isLocal) {
+      var savUrl = isLocal ? LOCAL_SAV : REMOTE_SAV;
+      var dsmUrl = isLocal ? LOCAL_DSM : REMOTE_DSM;
+
+      document.getElementById('card-sav').href = savUrl;
+      document.getElementById('card-dsm').href = dsmUrl;
+      document.getElementById('fab-sav').href  = savUrl;
+
+      dot.className   = 'dot ' + (isLocal ? 'dot-local' : 'dot-remote');
+      label.textContent = isLocal
+        ? 'Réseau local — accès direct'
+        : 'Accès externe — via IP publique';
+    }
+
+    // Détection : on tente un fetch sur l'IP locale avec timeout court
+    var timeout = new Promise(function(_, reject) {
+      setTimeout(function() { reject(new Error('timeout')); }, 1500);
+    });
+
+    var probe = fetch('http://192.168.1.70:3000', {
+      method: 'HEAD',
+      mode: 'no-cors'
+    });
+
+    Promise.race([probe, timeout])
+      .then(function() {
+        applyUrls(true);  // local accessible
+      })
+      .catch(function() {
+        applyUrls(false); // local inaccessible — on est en externe
+      });
+  </script>
+
+</body>
+</html>

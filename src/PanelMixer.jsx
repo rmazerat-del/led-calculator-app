@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 import { useLang, LangToggle } from "./LanguageContext";
 
+const esc = (s) => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
 // ── Algorithm ──────────────────────────────────────────────────────────────
 
 function roundMm(meters) {
@@ -146,9 +148,9 @@ async function exportPDF(sol, targetW, targetH, t) {
   const badgeStyle = sol.waste === 0 ? "background:#d4edda;color:#155724" : "background:#fff3cd;color:#856404";
 
   const rows = sol.layout.map(tile => `<tr>
-    <td style="${T()}">${tile.panel.panel_ref}</td>
-    <td style="${T()}">${tile.panel.marque||"—"}</td>
-    <td style="${T()}">${tile.panel.pitch_label || tile.panel.pixel_pitch_mm + " mm"}</td>
+    <td style="${T()}">${esc(tile.panel.panel_ref)}</td>
+    <td style="${T()}">${esc(tile.panel.marque)||"—"}</td>
+    <td style="${T()}">${esc(tile.panel.pitch_label || tile.panel.pixel_pitch_mm + " mm")}</td>
     <td style="${T()}">${tile.wMm}×${tile.hMm} mm</td>
     <td style="${T()}">${tile.cols} col. × ${tile.rows} rang${tile.rows>1?"s":""}</td>
     <td style="${T("font-weight:700;color:#0071e3")}">${tile.count}</td>

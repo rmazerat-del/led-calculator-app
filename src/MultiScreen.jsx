@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 import { useLang, LangToggle } from "./LanguageContext";
 
+const esc = (s) => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
 // ── Algorithm (identical to PanelMixer) ────────────────────────────────────
 
 function roundMm(m) { return Math.round(parseFloat(m) * 1000); }
@@ -181,9 +183,9 @@ async function exportMultiScreenPDF(screens, t) {
       ? "background:#d4edda;color:#155724"
       : "background:#fff3cd;color:#856404";
     const rows = sol.layout.map(tile => `<tr>
-      <td style="${T()}">${tile.panel.panel_ref}</td>
-      <td style="${T()}">${tile.panel.marque||"—"}</td>
-      <td style="${T()}">${tile.panel.pixel_pitch_mm} mm</td>
+      <td style="${T()}">${esc(tile.panel.panel_ref)}</td>
+      <td style="${T()}">${esc(tile.panel.marque)||"—"}</td>
+      <td style="${T()}">${esc(tile.panel.pitch_label || tile.panel.pixel_pitch_mm + " mm")}</td>
       <td style="${T()}">${tile.wMm}×${tile.hMm} mm</td>
       <td style="${T()}">${tile.cols} col. × ${tile.rows} rang${tile.rows>1?"s":""}</td>
       <td style="${T("font-weight:700;color:#0071e3")}">${tile.count}</td>
@@ -219,11 +221,11 @@ async function exportMultiScreenPDF(screens, t) {
     const sol = s.solution;
     return `<tr>
       <td style="${T()}">${i+1}</td>
-      <td style="${T()}"><b>${s.name}</b></td>
+      <td style="${T()}"><b>${esc(s.name)}</b></td>
       <td style="${T()}">${parseFloat(s.targetW).toFixed(3)} × ${parseFloat(s.targetH).toFixed(3)} m</td>
       <td style="${T()}">${(sol.actualW/1000).toFixed(3)} × ${(sol.actualH/1000).toFixed(3)} m</td>
       <td style="${T("font-weight:700;color:#0071e3")}">${sol.totalPanels}</td>
-      <td style="${T("font-size:10px")}">${sol.layout.map(tile=>`<b>${tile.panel.panel_ref}</b> ×${tile.count}`).join("<br>")}</td>
+      <td style="${T("font-size:10px")}">${sol.layout.map(tile=>`<b>${esc(tile.panel.panel_ref)}</b> ×${tile.count}`).join("<br>")}</td>
       <td style="${T()}">${sol.totalPixW}×${sol.totalPixH}</td>
       <td style="${T()}">${sol.totalWeight.toFixed(1)} kg</td>
       <td style="${T()}">${(sol.totalPowerMax/1000).toFixed(2)} kW</td>
