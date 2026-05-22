@@ -416,7 +416,7 @@ export default function LandingPage({ onNavigate }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: 48,
+          gap: 40,
           flexWrap: "wrap",
         }}>
           {PARTNERS.map((p, i) => (
@@ -425,21 +425,27 @@ export default function LandingPage({ onNavigate }) {
               onMouseEnter={() => setPartnerHovered(i)}
               onMouseLeave={() => setPartnerHovered(null)}
               style={{
-                opacity: partnerHovered === i ? 0.9 : 0.38,
-                transform: partnerHovered === i ? "scale(1.06)" : "scale(1)",
+                opacity: partnerHovered === i ? 0.88 : 0.3,
+                transform: partnerHovered === i ? "scale(1.05)" : "scale(1)",
                 transition: "opacity 0.35s cubic-bezier(0.25,1,0.5,1), transform 0.35s cubic-bezier(0.25,1,0.5,1)",
                 cursor: "default",
+                background: "#ffffff",
+                borderRadius: 9,
+                padding: "9px 22px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               <img
                 src={p.src}
                 alt={p.alt}
                 style={{
-                  height: 36,
+                  height: 30,
                   width: "auto",
-                  maxWidth: 160,
+                  maxWidth: 150,
                   display: "block",
-                  filter: "brightness(0) invert(1)",
+                  filter: "grayscale(0.25)",
                   userSelect: "none",
                   pointerEvents: "none",
                 }}
