@@ -4,11 +4,12 @@ import AdminPanels from "./AdminPanels";
 import PanelMixer from "./PanelMixer";
 import MultiScreen from "./MultiScreen";
 import Login from "./Login";
+import LandingPage from "./LandingPage";
 import { LanguageProvider } from "./LanguageContext";
 import { supabase } from "./supabaseClient";
 
 function AppInner() {
-  const [page, setPage] = useState("calculator");
+  const [page, setPage] = useState("home");
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -25,23 +26,24 @@ function AppInner() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setPage("calculator");
+    setPage("home");
   };
 
   if (authLoading) return null;
 
+  if (page === "home") return <LandingPage onNavigate={setPage} />;
+
   if (page === "admin") {
     if (!session) return <Login />;
-    return <AdminPanels onBack={() => setPage("calculator")} onLogout={handleLogout} />;
+    return <AdminPanels onBack={() => setPage("home")} onLogout={handleLogout} />;
   }
-  if (page === "mixer") return <PanelMixer onBack={() => setPage("calculator")} />;
-  if (page === "multiscreen") return <MultiScreen onBack={() => setPage("calculator")} />;
+  if (page === "mixer") return <PanelMixer onBack={() => setPage("home")} />;
+  if (page === "multiscreen") return <MultiScreen onBack={() => setPage("home")} />;
 
   return (
     <LEDCalculator
       onAdmin={() => setPage("admin")}
-      onMixer={() => setPage("mixer")}
-      onMultiScreen={() => setPage("multiscreen")}
+      onHome={() => setPage("home")}
     />
   );
 }

@@ -841,7 +841,7 @@ async function generatePDF(selected, result, quality) {
 }
 
 // ── COMPOSANT PRINCIPAL ───────────────────────────────────────────────────────
-export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
+export default function LEDCalculator({ onAdmin, onHome }) {
   const { t } = useLang();
   const [products, setProducts]       = useState(STATIC_PRODUCTS);
   const [selIdx, setSelIdx]           = useState(0);
@@ -1104,8 +1104,20 @@ export default function LEDCalculator({ onAdmin, onMixer, onMultiScreen }) {
 
         <div className="topbar-right">
           <LangToggle />
-          {onMultiScreen && <button onClick={onMultiScreen} className="admin-btn" style={{background:"linear-gradient(145deg,#00b4d8,#0077b6)",color:"white",border:"none"}}>{t.multiBtn}</button>}
-          {onMixer && <button onClick={onMixer} className="admin-btn" style={{background:"linear-gradient(145deg,#6f42c1,#9d6bff)",color:"white",border:"none"}}>{t.mixBtn}</button>}
+          {onHome && (
+            <button onClick={onHome} className="admin-btn" title={t.homeBtn || "Accueil"} style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.15)",
+              color: "var(--text-muted)",
+              display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+              <span style={{ fontSize: 12 }}>{t.homeBtn || "Accueil"}</span>
+            </button>
+          )}
           <button onClick={handlePDF} disabled={pdfLoading} className="pdf-topbar-btn">
             {pdfLoading ? "⏳ Génération…" : t.exportPdf}
           </button>

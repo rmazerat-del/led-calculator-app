@@ -3,6 +3,20 @@ export const translations = {
     // ── Navigation ──
     back: "← Retour",
     backToCalc: "← Retour au calculateur",
+    homeBtn: "Accueil",
+
+    // ── Landing Page ──
+    landingSubtitle: "Configurateur professionnel — choisissez un mode pour commencer",
+    landingStandard: "Standard Screen",
+    landingStandardSub: "Écran LED unique",
+    landingStandardDesc: "Configurez les dimensions, le nombre de panneaux, la résolution et la consommation d'un écran LED.",
+    landingMulti: "Multi Screen",
+    landingMultiSub: "Plusieurs affichages",
+    landingMultiDesc: "Calculez et comparez plusieurs écrans LED simultanément avec des configurations indépendantes.",
+    landingMix: "Mix Size Screen",
+    landingMixSub: "Disposition mixte",
+    landingMixDesc: "Combinez différents formats de panneaux pour réaliser des architectures d'affichage LED complexes.",
+    landingLaunch: "Ouvrir",
 
     // ── Commun ──
     loading: "Chargement…",
@@ -355,6 +369,20 @@ export const translations = {
     // ── Navigation ──
     back: "← Back",
     backToCalc: "← Back to calculator",
+    homeBtn: "Home",
+
+    // ── Landing Page ──
+    landingSubtitle: "Professional configurator — choose a mode to begin",
+    landingStandard: "Standard Screen",
+    landingStandardSub: "Single LED display",
+    landingStandardDesc: "Configure dimensions, panel count, resolution and power consumption for a single LED screen.",
+    landingMulti: "Multi Screen",
+    landingMultiSub: "Multiple displays",
+    landingMultiDesc: "Calculate and compare multiple LED screens simultaneously with independent configurations.",
+    landingMix: "Mix Size Screen",
+    landingMixSub: "Mixed panel layout",
+    landingMixDesc: "Combine different panel formats to achieve complex custom LED display architectures.",
+    landingLaunch: "Open",
 
     // ── Common ──
     loading: "Loading…",
@@ -706,6 +734,20 @@ export const translations = {
     // ── Navigation ──
     back: "← 返回",
     backToCalc: "← 返回计算器",
+    homeBtn: "主页",
+
+    // ── Landing Page ──
+    landingSubtitle: "专业配置器 — 选择模式开始",
+    landingStandard: "标准屏幕",
+    landingStandardSub: "单块LED显示屏",
+    landingStandardDesc: "配置单块LED显示屏的尺寸、面板数量、分辨率和功耗。",
+    landingMulti: "多屏幕",
+    landingMultiSub: "多显示器布局",
+    landingMultiDesc: "同时计算和比较多块LED显示屏，每块屏幕独立配置。",
+    landingMix: "混合尺寸屏幕",
+    landingMixSub: "混合面板布局",
+    landingMixDesc: "组合不同面板规格，实现复杂的LED显示屏定制架构。",
+    landingLaunch: "打开",
 
     // ── Common ──
     loading: "加载中…",
