@@ -14,14 +14,21 @@ function AppInner() {
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setAuthLoading(false);
-    });
+    const timeout = setTimeout(() => setAuthLoading(false), 4000);
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        clearTimeout(timeout);
+        setSession(session);
+        setAuthLoading(false);
+      })
+      .catch(() => {
+        clearTimeout(timeout);
+        setAuthLoading(false);
+      });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
-    return () => subscription.unsubscribe();
+    return () => { subscription.unsubscribe(); clearTimeout(timeout); };
   }, []);
 
   const handleLogout = async () => {
