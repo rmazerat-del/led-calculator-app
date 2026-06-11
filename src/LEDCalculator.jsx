@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { jsPDF } from "jspdf";
 import { supabase } from "./supabaseClient";
 import { useLang, LangToggle } from "./LanguageContext";
 
@@ -614,7 +615,6 @@ function StatCard({ icon, label, value, sub, accentColor }) {
 
 // ── PDF ───────────────────────────────────────────────────────────────────────
 async function generatePDF(selected, result, quality) {
-  const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const W = 210, H = 297, margin = 16, colW = (W - margin * 2 - 8) / 2;
   const { panelsW: pW, panelsH: pH, totalWidth, totalHeight, resW: rW, resH: rH,
@@ -899,13 +899,6 @@ export default function LEDCalculator({ onAdmin, onHome }) {
     return () => document.head.removeChild(tag);
   }, []);
 
-  useEffect(() => {
-    if (!window.jspdf) {
-      const s = document.createElement("script");
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-      document.head.appendChild(s);
-    }
-  }, []);
 
   useEffect(() => {
     const obs = new ResizeObserver(([e]) => setVizSize({ w: e.contentRect.width, h: e.contentRect.height }));
@@ -1055,7 +1048,6 @@ export default function LEDCalculator({ onAdmin, onHome }) {
     : { background: BG_PRESETS.find(p => p.id === bgPreset)?.bg ?? "oklch(18% 0.028 245)" };
 
   const handlePDF = async () => {
-    if (!window.jspdf) { alert("jsPDF charge encore, réessayez."); return; }
     setPdfLoading(true);
     try { await generatePDF(selected, result, quality); }
     catch (e) { alert("Erreur PDF : " + e.message); }
