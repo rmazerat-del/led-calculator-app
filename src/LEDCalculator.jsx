@@ -5,6 +5,11 @@ import { jsPDF } from "jspdf";
 import { supabase } from "./supabaseClient";
 import { useLang, LangToggle } from "./LanguageContext";
 
+// ── RÈGLES D'INSTALLATION ──────────────────────────────────────────────────────
+// 1 port RJ45 supporte au maximum 650 000 pixels, 1 ligne électrique 3000 W.
+const RJ45_CAPACITY_PX     = 650_000;
+const ELEC_LINE_CAPACITY_W = 3000;
+
 // ── CONTRÔLEURS NOVASTAR ──────────────────────────────────────────────────────
 // ports = sorties Ethernet RJ45 vers panneaux LED
 // maxPixels = capacité totale de chargement pixels du contrôleur
@@ -619,8 +624,8 @@ async function generatePDF(selected, result, quality) {
   const W = 210, H = 297, margin = 16, colW = (W - margin * 2 - 8) / 2;
   const { panelsW: pW, panelsH: pH, totalWidth, totalHeight, resW: rW, resH: rH,
     totalPixels, surface, totalPanels, totalPowerMax, totalPowerAvg } = result;
-  const powerLines  = Math.ceil(totalPowerMax / (selected.power_cable_capacity || 2200));
-  const rj45Needed  = Math.ceil(totalPixels   / (selected.rj45_capacity       || 535000));
+  const powerLines  = Math.ceil(totalPowerMax / ELEC_LINE_CAPACITY_W);
+  const rj45Needed  = Math.ceil(totalPixels   / RJ45_CAPACITY_PX);
   const totalWeight = totalPanels * selected.weight_kgs;
   const diagonal    = Math.sqrt(totalWidth**2 + totalHeight**2) * 39.37;
   const viewMin     = parseFloat(selected.pixel_pitch_mm) * 1;
@@ -846,7 +851,7 @@ export default function LEDCalculator({ onAdmin, onHome }) {
   const [products, setProducts]       = useState(STATIC_PRODUCTS);
   const [selIdx, setSelIdx]           = useState(0);
   const [brandFilter, setBrandFilter] = useState("all");
-  const [sizeFilter, setSizeFilter]   = useState("60x34");
+  const [sizeFilter, setSizeFilter]   = useState("all");
   const [mode, setMode]               = useState("dimensions");
   const [width, setWidth]             = useState(3);
   const [height, setHeight]           = useState(2);
@@ -932,8 +937,8 @@ export default function LEDCalculator({ onAdmin, onHome }) {
   const { totalWidth, totalHeight, resW: rW, resH: rH, totalPixels, surface,
     totalPanels, totalPowerMax, totalPowerAvg, panelsW: pW, panelsH: pH } = result;
 
-  const powerLines  = Math.ceil(totalPowerMax / (selected.power_cable_capacity || 2200));
-  const rj45Needed  = Math.ceil(totalPixels   / (selected.rj45_capacity       || 535000));
+  const powerLines  = Math.ceil(totalPowerMax / ELEC_LINE_CAPACITY_W);
+  const rj45Needed  = Math.ceil(totalPixels   / RJ45_CAPACITY_PX);
   const totalWeight = totalPanels * selected.weight_kgs;
   const diagonal    = Math.sqrt(totalWidth**2 + totalHeight**2) * 39.37;
   const quality     = getScreenQuality(rW, rH);
@@ -975,7 +980,7 @@ export default function LEDCalculator({ onAdmin, onHome }) {
   };
   const loadConfig = (cfg) => {
     setBrandFilter(cfg.brandFilter || "all");
-    setSizeFilter(cfg.sizeFilter || "60x34");
+    setSizeFilter(cfg.sizeFilter || "all");
     setSelIdx(cfg.selIdx || 0);
     setMode(cfg.mode || "dimensions");
     setWidth(cfg.width); setHeight(cfg.height);
@@ -1459,8 +1464,8 @@ export default function LEDCalculator({ onAdmin, onHome }) {
             {activeTab === "install" && (
               <div>
                 <div className="stat-grid-2">
-                  <StatCard icon="🔌" label={t.statPowerLines} value={`${powerLines}`} sub={`${selected.power_cable_capacity||2200} W/ligne`} accentColor="#e8ff47" />
-                  <StatCard icon="🌐" label={t.statRj45Ports}  value={`${rj45Needed}`} sub={`${(selected.rj45_capacity||535000).toLocaleString()} px/port`} accentColor="#47c4ff" />
+                  <StatCard icon="🔌" label={t.statPowerLines} value={`${powerLines}`} sub={`${ELEC_LINE_CAPACITY_W} W/ligne`} accentColor="#e8ff47" />
+                  <StatCard icon="🌐" label={t.statRj45Ports}  value={`${rj45Needed}`} sub={`${RJ45_CAPACITY_PX.toLocaleString()} px/port`} accentColor="#47c4ff" />
                 </div>
                 <div className="data-table-wrap">
                   <table className="data-table">

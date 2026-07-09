@@ -90,6 +90,11 @@ export default function AdminPanels({ onBack, onLogout }) {
   const [csvRows, setCsvRows]     = useState([]);
   const [csvImporting, setCsvImporting] = useState(false);
   const csvInputRef = useRef(null);
+  const [showHistory, setShowHistory]   = useState(false);
+  const [history, setHistory]           = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [restoringId, setRestoringId]   = useState(null);
 
   useEffect(() => {
     const styleTag = document.createElement("style");
@@ -244,11 +249,41 @@ if (editing) {
   const purgeInactive = async () => {
     const inactifs = panels.filter(p => !p.is_active);
     if (inactifs.length === 0) { setAlert({ type: "error", msg: "Aucun panneau inactif à supprimer." }); return; }
-    if (!window.confirm(`Supprimer définitivement ${inactifs.length} panneau(x) inactif(s) ?\n\n${inactifs.map(p => p.panel_ref).join("\n")}\n\nCette action est irréversible.`)) return;
+    const typed = window.prompt(
+      `Suppression définitive de ${inactifs.length} panneau(x) inactif(s) :\n\n${inactifs.map(p => p.panel_ref).join("\n")}\n\nTapez SUPPRIMER pour confirmer (irréversible, mais l'historique reste consultable).`
+    );
+    if (typed !== "SUPPRIMER") return;
     const ids = inactifs.map(p => p.id);
     const { error } = await supabase.from("products").delete().in("id", ids);
     if (error) setAlert({ type: "error", msg: `Erreur : ${error.message}` });
     else { setAlert({ type: "success", msg: `${inactifs.length} panneau(x) inactif(s) supprimé(s).` }); fetchPanels(); }
+  };
+
+  const openHistory = async () => {
+    setShowHistory(true);
+    setHistoryLoading(true);
+    setHistoryError(null);
+    const { data, error } = await supabase
+      .from("products_audit")
+      .select("*")
+      .order("changed_at", { ascending: false })
+      .limit(200);
+    if (error) setHistoryError(error.message);
+    else setHistory(data || []);
+    setHistoryLoading(false);
+  };
+
+  const restoreDeleted = async (entry) => {
+    if (!window.confirm(`Restaurer "${entry.panel_ref}" tel qu'il était avant suppression ?`)) return;
+    setRestoringId(entry.id);
+    const { id: _id, ...rest } = entry.row_data;
+    const { error } = await supabase.from("products").upsert(rest, { onConflict: "panel_ref" });
+    setRestoringId(null);
+    if (error) setAlert({ type: "error", msg: `Restauration échouée : ${error.message}` });
+    else {
+      setAlert({ type: "success", msg: `"${entry.panel_ref}" restauré.` });
+      fetchPanels();
+    }
   };
 
   const downloadTemplate = () => {
@@ -309,6 +344,7 @@ if (editing) {
             <input ref={csvInputRef} type="file" accept=".csv,text/csv" style={{ display:"none" }} onChange={handleCSVFile} />
             <button className="btn-secondary" onClick={downloadTemplate}>{t.csvTemplate}</button>
             <button className="btn-secondary" onClick={() => csvInputRef.current?.click()}>{t.csvImport}</button>
+            <button className="btn-secondary" onClick={openHistory}>Historique</button>
             <button className="btn-danger" onClick={purgeInactive}>{t.purgeInactive}</button>
             <button className="btn-primary" onClick={openAdd}>{t.addPanel}</button>
           </div>
@@ -432,6 +468,64 @@ if (editing) {
               <button className="btn-primary" onClick={handleCSVImport} disabled={csvImporting || csvRows.filter(r => !r._error).length === 0}>
                 {csvImporting ? t.importing : t.importBtn(csvRows.filter(r => !r._error).length)}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showHistory && (
+        <div className="modal-bg" onClick={() => setShowHistory(false)}>
+          <div className="modal" style={{ width: 720 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Historique des modifications</div>
+            {historyError && (
+              <div className="alert-error">
+                {historyError.includes("products_audit")
+                  ? "Table d'historique introuvable. Exécutez supabase/products_audit.sql dans le SQL Editor Supabase pour l'activer."
+                  : historyError}
+              </div>
+            )}
+            {historyLoading ? (
+              <div className="loading">Chargement…</div>
+            ) : history.length === 0 && !historyError ? (
+              <div className="empty">Aucun historique pour l'instant.</div>
+            ) : (
+              <div className="csv-preview" style={{ maxHeight: 420 }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Action</th>
+                      <th>Référence</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map(entry => (
+                      <tr key={entry.id}>
+                        <td>{new Date(entry.changed_at).toLocaleString("fr-FR")}</td>
+                        <td>
+                          {entry.action === "DELETE" ? "🗑 Suppression" : entry.action === "INSERT" ? "➕ Ajout" : "✏️ Modification"}
+                        </td>
+                        <td style={{ fontWeight: 700 }}>{entry.panel_ref || "—"}</td>
+                        <td>
+                          {entry.action === "DELETE" && (
+                            <button
+                              className="btn-secondary"
+                              disabled={restoringId === entry.id}
+                              onClick={() => restoreDeleted(entry)}
+                            >
+                              {restoringId === entry.id ? "…" : "Restaurer"}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setShowHistory(false)}>{t.cancel}</button>
             </div>
           </div>
         </div>

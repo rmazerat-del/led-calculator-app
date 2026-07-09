@@ -8,6 +8,8 @@ import LandingPage from "./LandingPage";
 import { LanguageProvider } from "./LanguageContext";
 import { supabase } from "./supabaseClient";
 
+const ADMIN_EMAILS = ["rmazerat@gmail.com"];
+
 function AppInner() {
   const [page, setPage] = useState("home");
   const [session, setSession] = useState(null);
@@ -42,6 +44,27 @@ function AppInner() {
 
   if (page === "admin") {
     if (!session) return <Login />;
+    const isAdmin = ADMIN_EMAILS.includes((session.user?.email || "").toLowerCase());
+    if (!isAdmin) {
+      return (
+        <div style={{
+          minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center",
+          justifyContent: "center", gap: 14, background: "#f5f5f7", fontFamily: "-apple-system, sans-serif"
+        }}>
+          <div style={{ fontSize: 40 }}>🚫</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#1d1d1f" }}>Accès refusé</div>
+          <div style={{ fontSize: 13, color: "#6e6e73" }}>
+            Ce compte ({session.user?.email}) n'a pas accès à l'administration.
+          </div>
+          <button onClick={handleLogout} style={{
+            marginTop: 6, padding: "10px 18px", borderRadius: 8, border: "none",
+            background: "#ff3b30", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer"
+          }}>
+            Déconnexion
+          </button>
+        </div>
+      );
+    }
     return <AdminPanels onBack={() => setPage("home")} onLogout={handleLogout} />;
   }
   if (page === "mixer") return <PanelMixer onBack={() => setPage("home")} />;
